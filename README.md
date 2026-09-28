@@ -2,7 +2,7 @@
 
 # UwU Kahoot AI
 
-### A local-first AI companion for live Kahoot questions
+### A local-first AI companion for live Kahoot and Blooket questions
 
 ![Chrome extension](https://img.shields.io/badge/Chrome-Manifest%20V3-4f46e5?style=for-the-badge&logo=googlechrome&logoColor=white)
 ![Gemini](https://img.shields.io/badge/Google%20AI%20Studio-Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white)
@@ -17,7 +17,7 @@
 
 ## This is UwU Kahoot AI :)
 
-UwU Kahoot AI reads question data from the selected Kahoot player tab and sends it to the provider you configure. Answers come back to the extension, which can highlight a suggestion or use the answer controls you enable.
+UwU Kahoot AI reads question data from the selected Kahoot or Blooket player tab and sends it to the provider you configure. Answers come back to the extension, which can highlight a suggestion or use the answer controls you enable.
 
 ## Credits
 
@@ -25,10 +25,10 @@ UwU Kahoot AI is a substantially modified derivative of [kAIhoot](https://github
 
 Both upstream projects use MIT. Their copyright and license notices are retained in this repository's [LICENSE](LICENSE). UwU Kahoot AI adds broader provider support, multi-key management, model selection, fallback routing, and changes to question handling, diagnostics, and the user interface.
 
-The game host must have **Show questions & answers on players' devices** enabled for the player page to receive question text. When that setting is off, the extension cannot recover the hidden question from the player tab.
+For Kahoot, the host must enable **Show questions & answers on players' devices** for the player page to receive question text. When that setting is off, the extension cannot recover the hidden question from the player tab.
 
-- 🎮 Handles the common live question formats, including image questions.
-- 🗂️ Connects to multiple open Kahoot tabs; choose which tab's live state the popup displays.
+- 🎮 Handles the common Kahoot live question formats, including image questions.
+- 🗂️ Connects to multiple open Kahoot and Blooket tabs; choose which tab's live state the popup displays.
 - 🧠 Connects to Google AI Studio, OpenRouter, or OpenAI.
 - ⚡ Can route exact True/False choice pairs through a strict, low-reasoning fast model, then retry with the primary model if the fast reply is malformed or fails.
 - 🔁 Can try configured backup keys and models when a request is rate-limited or fails.
@@ -38,7 +38,11 @@ The game host must have **Show questions & answers on players' devices** enabled
 
 > Question access depends on the host's Kahoot settings and the active player page. Answers from AI can be wrong; review suggestions before enabling automatic actions.
 
+On Blooket, the current adapter supports visible text multiple-choice questions in the live player at `play.blooket.com`. Other question layouts or game modes may not expose choices in the supported format.
+
 ## Where it works
+
+The formats below describe Kahoot support. Blooket support currently covers visible text multiple-choice questions in its live player.
 
 | Area | What it does |
 | --- | --- |
@@ -59,7 +63,7 @@ The game host must have **Show questions & answers on players' devices** enabled
 
 ## Signals
 
-The **Stats** page records AI answers returned to the extension, average and total model response time, and recently answered questions. These counts do not confirm that an answer was submitted or marked correct by Kahoot. Response time covers the AI request, including any provider fallback attempts; it excludes Kahoot page loading and configured answer delay. Stats stay in this browser's extension storage.
+The **Stats** page records AI answers returned to the extension, average and total model response time, and recently answered questions. These counts do not confirm that an answer was submitted or marked correct by the game. Response time covers the AI request, including any provider fallback attempts; it excludes game page loading and configured answer delay. Stats stay in this browser's extension storage.
 
 The model catalog shows the provider-reported details it can retrieve. Gemini speed is an estimate when the API does not return token counts. The extension cannot read Google's project-wide remaining quota; its Gemini panel shows this extension's local request counts and links to the provider's live quota page.
 
@@ -71,7 +75,7 @@ The model catalog shows the provider-reported details it can retrieve. Gemini sp
 2. Open Chrome's Extensions page and turn on **Developer mode**.
 3. Choose **Load unpacked** and select the folder that contains `manifest.json`.
 4. Open UwU Kahoot AI and choose a provider. Provider selection, fallback, and API key changes apply immediately; save model settings when you're ready.
-5. Open a Kahoot player tab to see its live session status.
+5. Open a Kahoot or Blooket live player tab to see its session status.
 
 ### Configure provider keys and backups
 
@@ -83,7 +87,7 @@ Use the provider's own usage page to check current pricing and limits. A model a
 
 ### Choose how answers appear
 
-The dashboard lets you control answer highlighting, automatic clicks, pin placement, answer delay, and Silent mode. Silent mode hides extension badges, highlights, and delay countdowns while keeping the configured answer actions active.
+The popup's **Extension** switch pauses question detection, AI requests, and answer actions without removing your settings. Turn it back on to resume. The dashboard also lets you control answer highlighting, automatic clicks, pin placement, answer delay, and Silent mode. Silent mode hides extension badges, highlights, and delay countdowns while keeping the configured answer actions active.
 
 ## Numbers matter? ohhh yes.
 
@@ -94,7 +98,7 @@ The dashboard's live card shows the active question state. The dedicated Stats p
 - `pages/` — popup, dashboard, and stats documents.
 - `scripts/ai/` — question prompts, response parsing, provider settings, and request transport.
 - `scripts/background/` — extension service worker and message routing.
-- `scripts/content/` — Kahoot page controller, answer actions, feedback UI, and DOM helpers.
+- `scripts/content/` — Kahoot and Blooket page adapters, answer actions, feedback UI, and DOM helpers.
 - `scripts/content/page-bridge/` — focused page-context bridge source modules; `npm run build` bundles them into the single classic script injected before Kahoot opens its WebSocket.
 - `scripts/core/` — provider storage, key management, matching, model catalogs, routing, and usage accounting.
 - `scripts/popup/` — popup orchestration, live-session UI, key manager, catalog, quota panel, and stats summary.

@@ -102,7 +102,7 @@ openApiDashboardBtn?.addEventListener('click', async () => {
   } else {
     initializePopupStats();
     void initializeLiveSession().catch(() => {
-      setLiveStatus('error', 'Could not check Kahoot tabs', 'Close and reopen the popup to retry the tab check.');
+      setLiveStatus('error', 'Could not check quiz tabs', 'Close and reopen the popup to retry the tab check.');
     });
   }
   settingsController.wireSettings();

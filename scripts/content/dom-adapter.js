@@ -1,5 +1,6 @@
 (function initDomAdapter(global) {
   const ANSWER_SELECTORS = [
+    '[data-uwu-blooket-answer="true"]',
     'button[data-functional-selector^="answer-"]',
     '[data-functional-selector^="answer-" i]',
     '[data-functional-selector*="question-choice" i]',

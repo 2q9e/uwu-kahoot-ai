@@ -23,6 +23,9 @@ export function createPopupSettingsController() {
   const fallbackCb = document.getElementById('aiFallback');
   const delaySlider = document.getElementById('answerDelay');
   const delayValue = document.getElementById('delayValue');
+  const pluginEnabledCb = document.getElementById('pluginEnabled');
+  const pluginEnabledLabel = document.getElementById('extensionEnabledLabel');
+  const pluginEnabledStatus = document.getElementById('extensionEnabledStatus');
   const toggleAIConfig = document.getElementById('toggleAIConfig');
   const aiSection = document.getElementById('aiSection');
   const collapseArrow = document.getElementById('collapseArrow');
@@ -57,6 +60,10 @@ export function createPopupSettingsController() {
   let currentSettings = {};
   let apiSettingsState = 'loading';
   let providerChangeToken = 0;
+  let pluginSettingRevision = 0;
+  let latestPluginEnabled = true;
+  let pluginStateLoaded = false;
+  let pluginTogglePending = false;
   const providerKeyLoadErrors = new Set();
 
   function setProviderKeyLoadStatus(provider, loaded) {
@@ -104,6 +111,23 @@ export function createPopupSettingsController() {
     if (delayValue) delayValue.textContent = value > 0 ? `${value}s` : 'Off';
   }
 
+  function renderPluginEnabled(enabled) {
+    const isEnabled = enabled !== false;
+    latestPluginEnabled = isEnabled;
+    if (pluginEnabledCb) {
+      pluginEnabledCb.checked = isEnabled;
+      pluginStateLoaded = true;
+      pluginEnabledCb.disabled = pluginTogglePending;
+    }
+    if (pluginEnabledLabel) pluginEnabledLabel.textContent = isEnabled ? 'Enabled' : 'Paused';
+    if (pluginEnabledStatus) {
+      pluginEnabledStatus.textContent = isEnabled
+        ? 'Quiz detection, AI requests, and answer actions are on.'
+        : 'Quiz detection, AI requests, and answer actions are paused.';
+    }
+    document.body.dataset.pluginEnabled = String(isEnabled);
+  }
+
   function updateNewApiKeyProviderLabel() {
     if (newApiKeyProviderLabel) newApiKeyProviderLabel.textContent = PROVIDER_KEY_LABELS[currentProvider] || 'Provider API key';
   }
@@ -116,12 +140,18 @@ export function createPopupSettingsController() {
 
 
   async function loadSettings() {
+    const pluginRevisionAtRead = pluginSettingRevision;
     const settings = await chrome.storage.sync.get([
       'highlightOption', 'autoClickOption', 'pinHighlightOption', 'pinAutoClickOption',
-      'silentMode', 'answerDelay', 'aiProvider', MODEL_REASONING_STORAGE_KEY,
+      'silentMode', 'answerDelay', 'pluginEnabled', 'aiProvider', MODEL_REASONING_STORAGE_KEY,
       'aiFallbackEnabled', ...getProviderModelSettingKeys(),
       'fastBinaryAnswersEnabled'
     ]);
+    const pluginEnabled = pluginRevisionAtRead === pluginSettingRevision
+      ? settings.pluginEnabled !== false
+      : latestPluginEnabled;
+    currentSettings = { ...currentSettings, pluginEnabled };
+    renderPluginEnabled(pluginEnabled);
     const migratedModels = getOpenRouterDefaultMigration(settings);
     if (Object.keys(migratedModels).length) {
       await chrome.storage.sync.set(migratedModels);
@@ -136,9 +166,13 @@ export function createPopupSettingsController() {
     ));
     currentSettings = {
       ...settings,
+      pluginEnabled: pluginRevisionAtRead === pluginSettingRevision
+        ? settings.pluginEnabled !== false
+        : latestPluginEnabled,
       privateApiKeys: Object.fromEntries(privateEntries),
       managedApiKeys: Object.fromEntries(managedEntries)
     };
+    renderPluginEnabled(currentSettings.pluginEnabled);
     apiSettingsState = 'ready';
 
     if (highlightCb) highlightCb.checked = settings.highlightOption !== false;
@@ -200,6 +234,36 @@ export function createPopupSettingsController() {
   }
 
   function wireSettings() {
+    pluginEnabledCb?.addEventListener('change', async () => {
+      const previousValue = currentSettings.pluginEnabled !== false;
+      const nextValue = pluginEnabledCb.checked;
+      const changeRevision = ++pluginSettingRevision;
+      latestPluginEnabled = nextValue;
+      pluginTogglePending = true;
+      pluginEnabledCb.disabled = true;
+      if (pluginEnabledStatus) pluginEnabledStatus.textContent = 'Saving extension state…';
+      try {
+        await chrome.storage.sync.set({ pluginEnabled: nextValue });
+        currentSettings.pluginEnabled = nextValue;
+        renderPluginEnabled(nextValue);
+      } catch (_) {
+        if (pluginSettingRevision === changeRevision) {
+          renderPluginEnabled(previousValue);
+          if (pluginEnabledStatus) pluginEnabledStatus.textContent = 'Could not save this change. Check extension storage and try again.';
+        }
+      } finally {
+        pluginTogglePending = false;
+        pluginEnabledCb.disabled = !pluginStateLoaded;
+      }
+    });
+
+    chrome.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName !== 'sync' || !Object.hasOwn(changes, 'pluginEnabled')) return;
+      pluginSettingRevision += 1;
+      currentSettings.pluginEnabled = changes.pluginEnabled.newValue !== false;
+      renderPluginEnabled(currentSettings.pluginEnabled);
+    });
+
     wirePreferenceControls({
       checkboxPreferences: [
         [highlightCb, 'highlightOption'],

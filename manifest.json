@@ -29,7 +29,8 @@
   "content_scripts": [
     {
       "matches": [
-        "*://*.kahoot.it/*"
+        "*://*.kahoot.it/*",
+        "https://play.blooket.com/*"
       ],
       "css": [
         "styles/content.css"
@@ -37,6 +38,7 @@
       "js": [
         "scripts/content/matching.js",
         "scripts/content/dom-adapter.js",
+        "scripts/content/blooket-adapter.js",
         "scripts/content/answer-feedback-ui.js",
         "scripts/content/dom-wait.js",
         "scripts/content/question-dom.js",
@@ -71,6 +73,7 @@
   },
   "host_permissions": [
     "https://*.kahoot.it/*",
+    "https://play.blooket.com/*",
     "https://api.openai.com/*",
     "https://openrouter.ai/*",
     "https://generativelanguage.googleapis.com/*"
@@ -78,5 +81,5 @@
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self';"
   },
-  "description": "A private AI quiz companion with Gemini, OpenRouter, and local answer stats. Not affiliated with Kahoot!"
+  "description": "A private AI quiz companion with Gemini, OpenRouter, and local answer stats. Not affiliated with Kahoot! or Blooket."
 }

@@ -1,4 +1,8 @@
-import { isKahootUrl, resolveKahootTabSelection } from './kahoot-tab-state.js';
+import { getQuizPlatform, isSupportedQuizUrl, resolveKahootTabSelection } from './kahoot-tab-state.js';
+
+function getPlatformName(tab) {
+  return getQuizPlatform(tab?.url) === 'blooket' ? 'Blooket' : 'Kahoot';
+}
 
 const SELECTED_KAHOOT_TAB_KEY = 'uwuKahootSelectedTabId';
 
@@ -49,11 +53,11 @@ export function createLiveSessionTabs({
     if (!kahootTabs.length) {
       const option = document.createElement('option');
       option.value = '';
-      option.textContent = 'No open Kahoot tabs';
+      option.textContent = 'No open quiz tabs';
       kahootTabSelect.append(option);
       kahootTabSelect.disabled = true;
       if (kahootTabCount) kahootTabCount.textContent = '0 open';
-      if (kahootAttachStatus) kahootAttachStatus.textContent = 'Open a Kahoot game in any window to attach.';
+      if (kahootAttachStatus) kahootAttachStatus.textContent = 'Open a Kahoot or Blooket game in any window to attach.';
       focusKahootTabBtn && (focusKahootTabBtn.disabled = true);
       reloadKahootTabBtn?.classList.add('hidden');
       return;
@@ -63,7 +67,7 @@ export function createLiveSessionTabs({
     for (const [position, tab] of kahootTabs.entries()) {
       const option = document.createElement('option');
       option.value = String(tab.id);
-      const label = (tab.title || 'Kahoot game').replace(/\s+/g, ' ').trim().slice(0, 52) || 'Kahoot game';
+      const label = (tab.title || `${getPlatformName(tab)} game`).replace(/\s+/g, ' ').trim().slice(0, 52) || `${getPlatformName(tab)} game`;
       const windowLabel = `Window ${Number.isInteger(tab.windowId) ? tab.windowId + 1 : '?'}`;
       const positionLabel = Number.isInteger(tab.index) ? `Tab ${tab.index + 1}` : `Tab ${position + 1}`;
       const activeLabel = tab.active ? ' · Active' : '';
@@ -86,11 +90,11 @@ export function createLiveSessionTabs({
     if (kahootAttachStatus) {
       const state = selected ? connectionState(selected.id) : 'checking';
       kahootAttachStatus.textContent = !selected
-        ? 'Choose a Kahoot tab to view its live question.'
+        ? 'Choose a quiz tab to view its live question.'
         : state === 'connected'
           ? `Connected to this tab. The live panel only shows activity from the selected tab${selected.active ? ', which is active' : ''}.`
           : state === 'reload'
-            ? 'This page has not connected yet. Reload this selected Kahoot tab to attach the extension.'
+            ? `This page has not connected yet. Reload this selected ${getPlatformName(selected)} tab to attach the extension.`
             : 'Checking this tab for the extension connection…';
     }
   }
@@ -122,7 +126,7 @@ export function createLiveSessionTabs({
     const token = ++tabRefreshToken;
     let tabs;
     try {
-      tabs = (await tabsApi.query({})).filter(tab => Number.isInteger(tab.id) && isKahootUrl(tab.url)).sort(compareKahootTabs);
+      tabs = (await tabsApi.query({})).filter(tab => Number.isInteger(tab.id) && isSupportedQuizUrl(tab.url)).sort(compareKahootTabs);
     } catch (_) {
       if (token !== tabRefreshToken) return;
       kahootTabs = [];
@@ -134,7 +138,7 @@ export function createLiveSessionTabs({
       renderTabs();
       clearSelectedQuestion();
       if (kahootAttachStatus) kahootAttachStatus.textContent = 'Could not inspect open tabs. Close and reopen the extension popup.';
-      setLiveStatus('error', 'Could not check Kahoot tabs', 'Close and reopen the popup to retry the tab check.');
+      setLiveStatus('error', 'Could not check quiz tabs', 'Close and reopen the popup to retry the tab check.');
       return;
     }
     if (token !== tabRefreshToken) return;
@@ -157,7 +161,7 @@ export function createLiveSessionTabs({
       kahootTabConnections.clear();
       kahootTabProbeTokens.clear();
       clearSelectedQuestion();
-      setLiveStatus('idle', 'Open a Kahoot game', 'Open a Kahoot tab in any window to see live question status.');
+      setLiveStatus('idle', 'Open a quiz game', 'Open a Kahoot or Blooket tab in any window to see live question status.');
     }
     for (const tab of tabs) {
       const previous = kahootTabConnections.get(tab.id);
@@ -170,10 +174,10 @@ export function createLiveSessionTabs({
     renderTabs();
     if (selectedKahootTabId !== oldSelection) {
       clearSelectedQuestion();
-      setLiveStatus('ready', 'Checking selected tab…', 'Reading the selected Kahoot tab.');
+      setLiveStatus('ready', 'Checking selected tab…', `Reading the selected ${getPlatformName(getSelectedTab())} tab.`);
       await pollCurrentQuestion(selectedKahootTabId);
     } else if (pollSelected && selectedKahootTabId) {
-      setLiveStatus('ready', 'Checking selected tab…', 'Reading the selected Kahoot tab.');
+      setLiveStatus('ready', 'Checking selected tab…', `Reading the selected ${getPlatformName(getSelectedTab())} tab.`);
       await pollCurrentQuestion(selectedKahootTabId);
     }
   }
@@ -197,9 +201,9 @@ export function createLiveSessionTabs({
     clearSelectedQuestion();
     renderTabs();
     if (selectedKahootTabId) {
-      setLiveStatus('ready', 'Checking selected tab…', 'Reading the selected Kahoot tab.');
+      setLiveStatus('ready', 'Checking selected tab…', `Reading the selected ${getPlatformName(getSelectedTab())} tab.`);
       pollCurrentQuestion(selectedKahootTabId);
-    } else setLiveStatus('idle', 'Open a Kahoot game', 'Open a Kahoot tab in any window to see live question status.');
+    } else setLiveStatus('idle', 'Open a quiz game', 'Open a Kahoot or Blooket tab in any window to see live question status.');
   });
 
   focusKahootTabBtn?.addEventListener('click', async () => {
@@ -210,7 +214,7 @@ export function createLiveSessionTabs({
       await windowsApi.update(tab.windowId, { focused: true });
       await tabsApi.update(tab.id, { active: true });
     } catch (_) {
-      setLiveStatus('error', 'Could not focus tab', 'The selected Kahoot tab may have been closed.');
+      setLiveStatus('error', 'Could not focus tab', 'The selected quiz tab may have been closed.');
     } finally {
       focusKahootTabBtn.disabled = !getSelectedTab();
     }
@@ -222,13 +226,13 @@ export function createLiveSessionTabs({
     reloadKahootTabBtn.disabled = true;
     kahootTabConnections.set(tab.id, { url: tab.url, state: 'checking' });
     renderTabs();
-    setLiveStatus('processing', 'Connecting…', 'Reloading only the selected Kahoot tab.');
+    setLiveStatus('processing', 'Connecting…', `Reloading only the selected ${getPlatformName(tab)} tab.`);
     try {
       await tabsApi.reload(tab.id);
     } catch (_) {
       kahootTabConnections.set(tab.id, { url: tab.url, state: 'reload' });
       renderTabs();
-      setLiveStatus('error', 'Could not reload tab', 'Try reloading the selected Kahoot page in the browser.');
+      setLiveStatus('error', 'Could not reload tab', `Try reloading the selected ${getPlatformName(tab)} page in the browser.`);
     }
   });
 
@@ -246,7 +250,7 @@ export function createLiveSessionTabs({
       void refreshTabs();
       return;
     }
-    if (!isKahootUrl(tab?.url) || changeInfo.status !== 'complete') return;
+    if (!isSupportedQuizUrl(tab?.url) || changeInfo.status !== 'complete') return;
     void refreshTabs({ probeIds: [tabId] }).then(() => {
       if (tabId === selectedKahootTabId) void pollCurrentQuestion(tabId);
     });

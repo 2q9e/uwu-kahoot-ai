@@ -7,6 +7,15 @@
   const log = (...args) => console.log(`%c${TAG}`, STYLE, ...args);
   const warn = (...args) => console.warn(`%c${TAG}`, STYLE, ...args);
   const OldWebSocket = window.WebSocket;
+  window.__uwuKahootAIEnabled = true;
+  window.addEventListener('kahootPluginStateChanged', event => {
+    window.__uwuKahootAIEnabled = event.detail?.enabled !== false;
+  });
+  for (const type of ['autoClickAnswer', 'autoClickMultiSelect', 'autoPinAnswer', 'autoJumbleAnswer', 'sliderWSSend', 'autoSliderAnswer', 'autoTypeAnswer']) {
+    window.addEventListener(type, event => {
+      if (window.__uwuKahootAIEnabled === false) event.stopImmediatePropagation();
+    }, true);
+  }
 
   window.__kahootWS = null;
   window.kahootClientId = null;
@@ -179,6 +188,7 @@
 
     ws.addEventListener('message', function (event) {
       try {
+        if (window.__uwuKahootAIEnabled === false) return;
         if (typeof event.data !== 'string') return;
         const data = JSON.parse(event.data);
         const items = Array.isArray(data) ? data : [data];
@@ -202,6 +212,7 @@
 
     const origSend = ws.send.bind(ws);
     ws.send = function (data) {
+      if (window.__uwuKahootAIEnabled === false) return origSend(data);
       try {
         const parsed = JSON.parse(data);
         const items = Array.isArray(parsed) ? parsed : [parsed];

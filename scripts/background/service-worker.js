@@ -1,4 +1,5 @@
 import { DEFAULT_MODEL, DEFAULT_VISION_MODEL, DEPRECATED_MODELS } from '../core/constants.js';
+import { isSupportedQuizUrl } from '../core/quiz-platform.js';
 import { recordProviderUsageInBackground } from '../core/provider-usage.js';
 import { classifyAiFailure, createDiagnosticRecord, diagnosticPresentation, DIAGNOSTICS_STORAGE_KEY } from './diagnostics.js';
 import { createQuestionProcessor } from './question-processor.js';
@@ -11,6 +12,26 @@ const SOLVE_STATS_KEY = 'uwuKahootSolveStats';
 let solveStatsWriteQueue = Promise.resolve();
 let diagnosticWriteQueue = Promise.resolve();
 const activeQuestionRequests = new Map();
+let pluginEnabledState = true;
+let pluginSettingRevision = 0;
+
+function isExtensionContextInvalidated(error) {
+  return /extension context invalidated/i.test(String(error?.message || error || ''));
+}
+
+function respondSafely(sendResponse, response) {
+  try {
+    sendResponse(response);
+    return true;
+  } catch (error) {
+    if (!isExtensionContextInvalidated(error)) err('Could not send a response to the requesting tab.');
+    return false;
+  }
+}
+
+Promise.resolve().then(() => chrome.storage.sync.get('pluginEnabled')).then(({ pluginEnabled }) => {
+  if (pluginSettingRevision === 0) pluginEnabledState = pluginEnabled !== false;
+}).catch(() => {});
 
 function recordDiagnostic(code, metadata = {}) {
   const record = createDiagnosticRecord(code, metadata);
@@ -22,14 +43,24 @@ function recordDiagnostic(code, metadata = {}) {
     if (newest?.code === record.code && newest?.stage === record.stage && newest?.provider === record.provider &&
         newest?.httpStatus === record.httpStatus && elapsed >= 0 && elapsed < 5000) return;
     await chrome.storage.local.set({ [DIAGNOSTICS_STORAGE_KEY]: [record, ...events].slice(0, 50) });
-  }).catch(() => err('Diagnostic history could not be saved.'));
+  }).catch(error => {
+    if (!isExtensionContextInvalidated(error)) err('Diagnostic history could not be saved.');
+  });
   return diagnosticWriteQueue;
 }
 
 self.addEventListener('error', event => {
+  if (isExtensionContextInvalidated(event.error || event.message)) {
+    event.preventDefault();
+    return;
+  }
   void recordDiagnostic('EXTENSION_UNHANDLED_ERROR', { stage: 'background', errorName: event.error?.name });
 });
 self.addEventListener('unhandledrejection', event => {
+  if (isExtensionContextInvalidated(event.reason)) {
+    event.preventDefault();
+    return;
+  }
   void recordDiagnostic('EXTENSION_UNHANDLED_ERROR', { stage: 'background', errorName: event.reason?.name });
 });
 
@@ -65,7 +96,9 @@ function recordGeneratedAnswer(solveId, question, answer, responseMs, signal) {
       solveIds: [solveId, ...solveIds].slice(0, 500)
     };
     await chrome.storage.local.set({ [SOLVE_STATS_KEY]: next });
-  }).catch(() => {
+  }).catch(error => {
+    // Ignore storage writes that are interrupted while the extension is reloaded.
+    if (isExtensionContextInvalidated(error) || !chrome.runtime?.id) return;
     err('Could not save local solve stats.');
     void recordDiagnostic('EXTENSION_STORAGE_ERROR', { stage: 'statistics' });
   });
@@ -85,6 +118,7 @@ function recordGeneratedAnswer(solveId, question, answer, responseMs, signal) {
       log(`Migrated model settings`, next);
     }
   } catch (error) {
+    if (isExtensionContextInvalidated(error)) return;
     err('Model migration failed.');
     void recordDiagnostic('EXTENSION_STORAGE_ERROR', { stage: 'settings', errorName: error?.name });
   }
@@ -94,7 +128,7 @@ chrome.commands.onCommand.addListener((command) => {
   if (command !== 'manual-answer') return;
   chrome.tabs.query({ lastFocusedWindow: true }, (tabs) => {
     const tab = tabs
-      .filter(candidate => isKahootTab(candidate.url))
+      .filter(candidate => isSupportedQuizUrl(candidate.url))
       .sort((a, b) => Number(b.active) - Number(a.active) || Number(b.lastAccessed || 0) - Number(a.lastAccessed || 0))[0];
     if (tab?.id) chrome.tabs.sendMessage(tab.id, { action: 'manualAnswer' }).catch(() => {});
   });
@@ -114,15 +148,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.url) cancelTabQuestionRequests(tabId);
 });
 
-function isKahootTab(url) {
-  try {
-    const hostname = new URL(url).hostname;
-    return hostname === 'kahoot.it' || hostname.endsWith('.kahoot.it');
-  } catch (_) {
-    return false;
-  }
-}
-
 function getRequestScope(tabId, frameId) {
   return `${Number.isInteger(tabId) ? tabId : 'unknown'}:${Number.isInteger(frameId) ? frameId : 0}`;
 }
@@ -130,10 +155,12 @@ function getRequestScope(tabId, frameId) {
 function sendToTab(tabId, frameId, action, data = {}) {
   const options = Number.isInteger(frameId) && frameId >= 0 ? { frameId } : undefined;
   try {
-    chrome.tabs.sendMessage(tabId, { action, ...data }, options).catch(() => {
+    chrome.tabs.sendMessage(tabId, { action, ...data }, options).catch(error => {
+      if (isExtensionContextInvalidated(error)) return;
       void recordDiagnostic('CONTENT_SCRIPT_DISCONNECTED', { stage: action === 'answerProgress' ? 'provider' : 'dispatch' });
     });
-  } catch (_) {
+  } catch (error) {
+    if (isExtensionContextInvalidated(error)) return;
     void recordDiagnostic('CONTENT_SCRIPT_DISCONNECTED', { stage: 'dispatch' });
   }
 }
@@ -164,12 +191,21 @@ const handleQuestion = createQuestionProcessor({
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'recordProviderUsage') {
     recordProviderUsageInBackground(msg.provider, msg.model, msg.status, msg.usage || {})
-      .then(() => sendResponse({ success: true }));
+      .then(() => respondSafely(sendResponse, { success: true }))
+      .catch(error => {
+        if (!isExtensionContextInvalidated(error)) void recordDiagnostic('EXTENSION_STORAGE_ERROR', { stage: 'statistics', errorName: error?.name });
+        respondSafely(sendResponse, { success: false });
+      });
     return true;
   }
 
   if (msg.action === 'recordDiagnostic') {
-    recordDiagnostic(msg.code, msg.metadata || {}).then(() => sendResponse({ success: true }));
+    recordDiagnostic(msg.code, msg.metadata || {})
+      .then(() => respondSafely(sendResponse, { success: true }))
+      .catch(error => {
+        if (!isExtensionContextInvalidated(error)) err('Could not finish recording a diagnostic.');
+        respondSafely(sendResponse, { success: false });
+      });
     return true;
   }
 
@@ -183,7 +219,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       active.controller.abort();
       log(`Cancelled stale question request ${requestId.slice(0, 12)}`);
     }
-    sendResponse({ ok: true, cancelled });
+    respondSafely(sendResponse, { ok: true, cancelled });
     return false;
   }
 
@@ -195,21 +231,59 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     const active = { requestId, controller, tabId: sender.tab?.id };
     activeQuestionRequests.set(scope, active);
 
-    handleQuestion(msg.question, sender.tab?.id, sender.frameId, requestId, msg.solveId, controller.signal)
-      .then(() => sendResponse({ ok: true }))
-      .catch(error => {
-        if (controller.signal.aborted || error?.name === 'AbortError') {
-          sendResponse({ ok: false, cancelled: true });
-          return;
+    Promise.resolve().then(() => chrome.storage.sync.get('pluginEnabled')).then(({ pluginEnabled }) => {
+      if (controller.signal.aborted || activeQuestionRequests.get(scope) !== active) {
+        respondSafely(sendResponse, { ok: false, cancelled: true });
+        return;
+      }
+      if (pluginEnabled === false || pluginEnabledState === false) {
+        activeQuestionRequests.delete(scope);
+        respondSafely(sendResponse, { ok: false, disabled: true });
+        return;
+      }
+
+      return handleQuestion(msg.question, sender.tab?.id, sender.frameId, requestId, msg.solveId, controller.signal)
+        .then(() => respondSafely(sendResponse, { ok: true }))
+        .catch(error => {
+          if (controller.signal.aborted || error?.name === 'AbortError') {
+            respondSafely(sendResponse, { ok: false, cancelled: true });
+            return;
+          }
+          if (isExtensionContextInvalidated(error)) return;
+          const code = classifyAiFailure(error, 'background');
+          const diagnostic = diagnosticPresentation(code);
+          void recordDiagnostic(code, { stage: 'background', httpStatus: error?.status, errorName: error?.name });
+          respondSafely(sendResponse, { error: diagnostic.title, suggestion: diagnostic.recovery, diagnosticCode: diagnostic.code });
+        })
+        .finally(() => {
+          if (activeQuestionRequests.get(scope) === active) activeQuestionRequests.delete(scope);
+        })
+        .catch(error => {
+          if (!isExtensionContextInvalidated(error)) err('Question request cleanup failed.');
+        });
+    }).catch(error => {
+      if (!isExtensionContextInvalidated(error)) {
+        void recordDiagnostic('EXTENSION_STORAGE_ERROR', { stage: 'settings', errorName: error?.name });
+        if (!controller.signal.aborted && activeQuestionRequests.get(scope) === active) {
+          respondSafely(sendResponse, { error: 'Extension settings could not be read.' });
+        } else {
+          respondSafely(sendResponse, { ok: false, cancelled: true });
         }
-        const code = classifyAiFailure(error, 'background');
-        const diagnostic = diagnosticPresentation(code);
-        void recordDiagnostic(code, { stage: 'background', httpStatus: error?.status, errorName: error?.name });
-        sendResponse({ error: diagnostic.title, suggestion: diagnostic.recovery, diagnosticCode: diagnostic.code });
-      })
-      .finally(() => {
-        if (activeQuestionRequests.get(scope) === active) activeQuestionRequests.delete(scope);
-      });
+      }
+    }).finally(() => {
+      if (activeQuestionRequests.get(scope) === active) activeQuestionRequests.delete(scope);
+    });
     return true;
+  }
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'sync' || !Object.hasOwn(changes, 'pluginEnabled')) return;
+  pluginSettingRevision += 1;
+  pluginEnabledState = changes.pluginEnabled.newValue !== false;
+  if (pluginEnabledState) return;
+  for (const [scope, active] of activeQuestionRequests) {
+    activeQuestionRequests.delete(scope);
+    active.controller.abort();
   }
 });

@@ -3,6 +3,15 @@ const STYLE = 'color:#c026d3;font-weight:bold';
 const log = (...args) => console.log(`%c${TAG}`, STYLE, ...args);
 const warn = (...args) => console.warn(`%c${TAG}`, STYLE, ...args);
 const OldWebSocket = window.WebSocket;
+window.__uwuKahootAIEnabled = true;
+window.addEventListener('kahootPluginStateChanged', event => {
+  window.__uwuKahootAIEnabled = event.detail?.enabled !== false;
+});
+for (const type of ['autoClickAnswer', 'autoClickMultiSelect', 'autoPinAnswer', 'autoJumbleAnswer', 'sliderWSSend', 'autoSliderAnswer', 'autoTypeAnswer']) {
+  window.addEventListener(type, event => {
+    if (window.__uwuKahootAIEnabled === false) event.stopImmediatePropagation();
+  }, true);
+}
 
 window.__kahootWS = null;
 window.kahootClientId = null;

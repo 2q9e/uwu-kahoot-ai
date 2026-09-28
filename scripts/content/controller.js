@@ -6,10 +6,13 @@ if (window.__UwUKahootAIContentLoaded) {
 } else {
   window.__UwUKahootAIContentLoaded = true;
 
-const script = document.createElement('script');
-script.src = chrome.runtime.getURL('scripts/content/page-bridge.js');
-script.onload = () => script.remove();
-(document.head || document.documentElement).appendChild(script);
+const isKahootPage = location.hostname === 'kahoot.it' || location.hostname.endsWith('.kahoot.it');
+if (isKahootPage) {
+  const script = document.createElement('script');
+  script.src = chrome.runtime.getURL('scripts/content/page-bridge.js');
+  script.onload = () => script.remove();
+  (document.head || document.documentElement).appendChild(script);
+}
 
 const TAG = '[UwU Kahoot AI]';
 const STYLE = 'color:#c026d3;font-weight:bold';
@@ -48,6 +51,7 @@ const NON_RETRYABLE_DIAGNOSTICS = new Set([
 ]);
 
 let cachedSettings = {
+  pluginEnabled: true,
   highlightOption: true,
   autoClickOption: true,
   pinHighlightOption: true,
@@ -103,6 +107,7 @@ let initialSettingsLoaded = false;
 let initialSettingsPromise;
 
 const CONTENT_SETTING_NORMALIZERS = {
+  pluginEnabled: value => value !== false,
   highlightOption: value => value !== false,
   autoClickOption: value => value !== false,
   pinHighlightOption: value => value !== false,
@@ -124,7 +129,7 @@ function refreshSettings() {
   const revisionAtRead = settingsRevision;
   return new Promise(resolve => {
     chrome.storage.sync.get(
-      ['highlightOption', 'autoClickOption', 'pinHighlightOption', 'pinAutoClickOption', 'answerDelay', 'silentMode'],
+      ['pluginEnabled', 'highlightOption', 'autoClickOption', 'pinHighlightOption', 'pinAutoClickOption', 'answerDelay', 'silentMode'],
       s => {
         if (chrome.runtime.lastError) recordDiagnostic('EXTENSION_STORAGE_ERROR', { stage: 'settings' });
         const values = settingsRevision === revisionAtRead ? (s || {}) : { ...(s || {}), ...latestSettingsChanges };
@@ -137,6 +142,7 @@ function refreshSettings() {
 
 chrome.storage.onChanged.addListener((changes, ns) => {
   if (ns !== 'sync') return;
+  const wasPluginEnabled = cachedSettings.pluginEnabled !== false;
   settingsRevision += 1;
   for (const [key, normalize] of Object.entries(CONTENT_SETTING_NORMALIZERS)) {
     if (!(key in changes)) continue;
@@ -144,13 +150,37 @@ chrome.storage.onChanged.addListener((changes, ns) => {
     latestSettingsChanges[key] = value;
     cachedSettings[key] = normalize(value);
   }
+  if (Object.hasOwn(changes, 'pluginEnabled')) {
+    window.dispatchEvent(new CustomEvent('kahootPluginStateChanged', {
+      detail: { enabled: cachedSettings.pluginEnabled }
+    }));
+  }
+  const isPluginEnabled = cachedSettings.pluginEnabled !== false;
+  if (wasPluginEnabled && !isPluginEnabled) {
+    clearCurrentQuestion('Extension paused. Detection and answer actions are off.');
+    answerFeedbackUi.cleanupOverlays();
+    removeStatusIndicator();
+  } else if (!wasPluginEnabled && isPluginEnabled) {
+    updateStatus('Extension enabled', 'Waiting for the next quiz question.');
+    window.dispatchEvent(new CustomEvent('kahootQuestionRescan'));
+  }
   if (cachedSettings.silentMode) {
     removeStatusIndicator();
     document.getElementById('uwukahootai-timer')?.remove();
   }
 });
 
-initialSettingsPromise = refreshSettings().then(() => { initialSettingsLoaded = true; });
+initialSettingsPromise = refreshSettings().then(() => {
+  initialSettingsLoaded = true;
+  window.dispatchEvent(new CustomEvent('kahootPluginStateChanged', {
+    detail: { enabled: cachedSettings.pluginEnabled }
+  }));
+  if (!cachedSettings.pluginEnabled) {
+    clearCurrentQuestion('Extension paused. Detection and answer actions are off.');
+    answerFeedbackUi.cleanupOverlays();
+    removeStatusIndicator();
+  }
+});
 
 window.addEventListener('error', event => recordDiagnostic('CONTENT_SCRIPT_UNHANDLED_ERROR', { stage: 'content', errorName: event.error?.name }));
 window.addEventListener('unhandledrejection', event => recordDiagnostic('CONTENT_SCRIPT_UNHANDLED_ERROR', { stage: 'content', errorName: event.reason?.name }));
@@ -200,11 +230,13 @@ function clearCurrentQuestion(status) {
 }
 
 function sendQuestionToBackend(question) {
+  if (!cachedSettings.pluginEnabled) return false;
+  const platformName = location.hostname === 'play.blooket.com' ? 'Blooket' : 'Kahoot';
   const choices = question.choices || [];
   if (CHOICE_QUESTION_TYPES.has(question.type) && (
     choices.length < 2 || choices.some(choice => !String(choice || '').trim()) || contentState.questionState === 'waiting_for_choices'
   )) {
-    updateStatus('Waiting for answer choices', 'No AI request was sent because Kahoot has not displayed the complete answer set yet.');
+    updateStatus('Waiting for answer choices', `No AI request was sent because ${platformName} has not displayed the complete answer set yet.`);
     return false;
   }
   contentState.currentSolveId ||= createSolveId();
@@ -222,7 +254,7 @@ function sendQuestionToBackend(question) {
   chrome.runtime.sendMessage({ action: 'processQuestion', question, requestId: contentState.lastSentHash, solveId: contentState.currentSolveId }, response => {
     if (chrome.runtime.lastError) {
       recordDiagnostic('BACKGROUND_WORKER_UNAVAILABLE', { stage: 'content' });
-      updateStatus('Error: extension background did not respond', 'Reload the extension, then reload the Kahoot tab.');
+      updateStatus('Error: extension background did not respond', `Reload the extension, then reload the ${platformName} tab.`);
       contentState.lastSentHash = null; contentState.lastPreparedHash = null;
       return;
     }
@@ -236,6 +268,7 @@ function sendQuestionToBackend(question) {
 
 globalThis.UwUKahootAIRuntimeMessageHandler.create({
   state: contentState,
+  isPluginEnabled: () => cachedSettings.pluginEnabled,
   questionScopedActions: QUESTION_SCOPED_ACTIONS,
   nonRetryableDiagnostics: NON_RETRYABLE_DIAGNOSTICS,
   questionHash,
@@ -251,9 +284,9 @@ globalThis.UwUKahootAIRuntimeMessageHandler.create({
   showErrorToast
 }).register();
 
-window.addEventListener('kahootGameReset', () => {
+window.addEventListener('kahootGameReset', event => {
   log('Game reset - clearing state');
-  clearCurrentQuestion('Waiting for the next Kahoot question.');
+  clearCurrentQuestion(event.detail?.status || 'Waiting for the next quiz question.');
   answerFeedbackUi.cleanupOverlays();
   removeStatusIndicator();
 });
@@ -261,7 +294,8 @@ window.addEventListener('kahootGameReset', () => {
 window.addEventListener('kahootQuestionDataIssue', event => {
   const code = event.detail?.code === 'QUESTION_TITLE_MISSING' ? 'QUESTION_TITLE_MISSING' : 'QUESTION_DATA_UNREADABLE';
   recordDiagnostic(code, { stage: 'detection' });
-  updateStatus(code === 'QUESTION_TITLE_MISSING' ? 'Question text not detected' : 'Kahoot question data unreadable', 'Wait for the question to finish loading, then reload the Kahoot tab if it repeats.');
+  const platformName = location.hostname === 'play.blooket.com' ? 'Blooket' : 'Kahoot';
+  updateStatus(code === 'QUESTION_TITLE_MISSING' ? 'Question text not detected' : `${platformName} question data unreadable`, 'Wait for the question to finish loading, then reload the game tab if it repeats.');
 });
 
 window.addEventListener('kahootAnswerDispatchResult', event => {
@@ -304,10 +338,12 @@ window.addEventListener('kahootNonScoredQuestion', (event) => {
       const path = location.pathname;
       if (path === lastPath) return;
       lastPath = path;
-      const inGame = GAME_PATHS.some(p => path.includes(p));
+      const inGame = location.hostname === 'play.blooket.com'
+        ? path.includes('/play')
+        : GAME_PATHS.some(p => path.includes(p));
       if (!inGame) {
         log(`Left game screen (${path}) - clearing status`);
-        clearCurrentQuestion('Waiting for a live Kahoot question.');
+        clearCurrentQuestion('Waiting for a live quiz question.');
         removeStatusIndicator();
         answerFeedbackUi.cleanupOverlays();
       }
@@ -345,6 +381,7 @@ globalThis.UwUKahootAIQuestionPreparation.create({
   log,
   warn,
   isInitialSettingsLoaded: () => initialSettingsLoaded,
+  isPluginEnabled: () => cachedSettings.pluginEnabled,
   getInitialSettingsPromise: () => initialSettingsPromise
 });
 

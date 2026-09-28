@@ -4,6 +4,7 @@ window.WebSocket = function (url, protocols) {
 
   ws.addEventListener('message', function (event) {
     try {
+      if (window.__uwuKahootAIEnabled === false) return;
       if (typeof event.data !== 'string') return;
       const data = JSON.parse(event.data);
       const items = Array.isArray(data) ? data : [data];
@@ -27,6 +28,7 @@ window.WebSocket = function (url, protocols) {
 
   const origSend = ws.send.bind(ws);
   ws.send = function (data) {
+    if (window.__uwuKahootAIEnabled === false) return origSend(data);
     try {
       const parsed = JSON.parse(data);
       const items = Array.isArray(parsed) ? parsed : [parsed];

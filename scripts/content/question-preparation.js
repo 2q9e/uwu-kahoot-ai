@@ -25,12 +25,14 @@
       recordDiagnostic,
       log,
       warn,
+      isPluginEnabled = () => true,
       isInitialSettingsLoaded,
       getInitialSettingsPromise
     } = dependencies;
 
     async function waitForQuestionIntro(preparationNonce, incomingHash) {
       state.loadingEndsAt = 0;
+      if (location.hostname === 'play.blooket.com') return true;
       const readLoadingDuration = () => {
         const loadBar = document.querySelector('[data-functional-selector="loading-bar-progress"]');
         if (!loadBar) return false;
@@ -164,6 +166,7 @@
     }
 
     window.addEventListener('kahootQuestionParsed', async (event) => {
+      if (!isPluginEnabled()) return;
       const q = event.detail;
       if (!q?.title) return;
 
@@ -194,7 +197,10 @@
         q.type !== previousQuestion.type ||
         String(q.questionIndex ?? '') !== String(previousQuestion.questionIndex ?? '')
       );
-      const previousDomSnapshot = isChoiceQuestion ? captureAnswerChoiceSnapshot() : [];
+      // Blooket's adapter emits only after its current question and choices appear.
+      const previousDomSnapshot = isChoiceQuestion && location.hostname !== 'play.blooket.com'
+        ? captureAnswerChoiceSnapshot()
+        : [];
       state.currentSolveId = createSolveId();
       cancelActiveRequest();
       state.lastSentHash = null;

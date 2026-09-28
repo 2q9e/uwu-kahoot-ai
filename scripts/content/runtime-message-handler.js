@@ -4,6 +4,7 @@
   function createRuntimeMessageHandler(dependencies) {
     const {
       state,
+      isPluginEnabled = () => true,
       questionScopedActions,
       nonRetryableDiagnostics,
       questionHash,
@@ -20,6 +21,11 @@
     } = dependencies;
 
     function handleMessage(request, _sender, sendResponse) {
+      if (!isPluginEnabled() && request.action !== 'ping' && request.action !== 'getQuestion') {
+        sendResponse({ success: false, disabled: true });
+        return false;
+      }
+
       if (request.requestId && questionScopedActions.has(request.action) &&
           (!state.currentQuestion || request.requestId !== questionHash(state.currentQuestion) || request.requestId !== state.activeRequestId)) {
         sendResponse({ success: false, stale: true });

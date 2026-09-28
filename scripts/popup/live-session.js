@@ -150,6 +150,8 @@ const question = createLiveSessionQuestion({
 });
 
 let sessionTabs;
+let pluginEnabled = true;
+let pluginSettingRevision = 0;
 sessionTabs = createLiveSessionTabs({
   kahootTabSelect,
   kahootTabCount,
@@ -163,6 +165,18 @@ sessionTabs = createLiveSessionTabs({
 
 chrome.runtime.onMessage.addListener((request, sender) => {
   question.handleRuntimeMessage(request, sender, sessionTabs);
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName !== 'sync' || !Object.hasOwn(changes, 'pluginEnabled')) return;
+  pluginSettingRevision += 1;
+  pluginEnabled = changes.pluginEnabled.newValue !== false;
+  if (!pluginEnabled) {
+    question.clearSelectedQuestion();
+    question.setLiveStatus('idle', 'Extension paused', 'Turn on the Extension switch to resume quiz detection and answer actions.');
+  } else {
+    void sessionTabs.refreshTabs({ pollSelected: true });
+  }
 });
 
 retryAnswerBtn?.addEventListener('click', () => question.retryAnswer(sessionTabs));
@@ -183,5 +197,14 @@ export function setLiveStatus(state, label, detail = '') {
 }
 
 export async function initializeLiveSession() {
+  const revision = pluginSettingRevision;
+  try {
+    const settings = await chrome.storage.sync.get('pluginEnabled');
+    if (revision === pluginSettingRevision) pluginEnabled = settings.pluginEnabled !== false;
+  } catch (_) {}
   await sessionTabs.initialize();
+  if (!pluginEnabled) {
+    question.clearSelectedQuestion();
+    question.setLiveStatus('idle', 'Extension paused', 'Turn on the Extension switch to resume quiz detection and answer actions.');
+  }
 }

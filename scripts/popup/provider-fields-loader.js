@@ -67,7 +67,7 @@ export function createProviderFieldsLoader(dependencies) {
         if (visionModelHelp) visionModelHelp.textContent = 'Choose a listed free model marked Image input in the catalog below.';
       } else {
         if (primaryModelHelp) primaryModelHelp.textContent = 'Choose a catalog model below or enter a provider model ID. This model handles normal text questions.';
-        if (visionModelHelp) visionModelHelp.textContent = 'Used when a Kahoot question includes an image. Pick a catalog model marked Image input.';
+        if (visionModelHelp) visionModelHelp.textContent = 'Used when a quiz question includes an image. Pick a catalog model marked Image input.';
       }
       if (catalogHelp) catalogHelp.textContent = provider === 'openrouter'
         ? 'OpenRouter TPS is the best free endpoint’s provider-reported 30-minute p50; it is metadata, not a live prompt test.'

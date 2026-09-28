@@ -51,14 +51,14 @@ export function createLiveSessionQuestionView({
       failed: handoff.nextProvider
         ? `${provider} failed${handoff.httpStatus ? ` · HTTP ${handoff.httpStatus}` : ''} → trying ${nextProvider}${nextModel ? ` · ${nextModel}` : ''}`
         : `${provider} request failed${handoff.httpStatus ? ` · HTTP ${handoff.httpStatus}` : ''}`,
-      matching: 'AI answer ready · checking it against Kahoot choices',
-      matched: 'Answer matched · preparing the Kahoot handoff',
+      matching: 'AI answer ready · checking it against the visible choices',
+      matched: 'Answer matched · preparing the game action',
       highlighted: 'Answer matched · highlighted on the page',
       suggested: 'Answer suggestion ready · review before submitting',
       manual_review: 'Answer match is uncertain · review before submitting',
-      sending: 'Sending answer over the Kahoot connection…',
-      sent: 'WebSocket send succeeded · Kahoot acceptance is unconfirmed',
-      send_failed: SEND_FAILED_MESSAGES[handoff.questionType] || 'Kahoot connection is not ready · the answer remains available on the page'
+      sending: 'Sending answer to the game…',
+      sent: 'Answer action was sent · game acceptance is unconfirmed',
+      send_failed: SEND_FAILED_MESSAGES[handoff.questionType] || 'Game connection is not ready · the answer remains available on the page'
     }[handoff.stage];
     if (!status) return;
     answerHandoff.textContent = status;
@@ -166,7 +166,7 @@ export function createLiveSessionQuestionView({
   function setWaitingForChoices(readiness) {
     showReadiness(readiness);
     if (answerText) {
-      answerText.textContent = 'Waiting for Kahoot to show the answer options…';
+      answerText.textContent = 'Waiting for the game to show the answer options…';
       answerText.classList.remove('thinking', 'active');
     }
     const expected = Math.max(2, Number(readiness?.expectedChoiceCount) || 2);
@@ -175,7 +175,7 @@ export function createLiveSessionQuestionView({
     const detail = visible
       ? `The page shows ${visible} of at least ${expected} readable choices. No AI request has been sent.`
       : received
-        ? `${received} choice${received === 1 ? '' : 's'} arrived in Kahoot data. Checking the page for at least ${expected}; no AI request has been sent.`
+        ? `${received} choice${received === 1 ? '' : 's'} arrived from the game. Checking the page for at least ${expected}; no AI request has been sent.`
         : `No choices arrived yet. Checking the page for at least ${expected}; no AI request has been sent.`;
     const expired = readiness?.recoveryExpired === true;
     setLiveStatus('waiting_for_choices', expired ? 'Answer options not ready' : 'Waiting for answer options', detail);
@@ -186,7 +186,7 @@ export function createLiveSessionQuestionView({
     readinessRetryPending = true;
     liveStatusState = 'waiting_for_choices';
     if (answerText) {
-      answerText.textContent = 'Checking Kahoot for answer options again…';
+      answerText.textContent = 'Checking the game page for answer options again…';
       answerText.classList.remove('thinking', 'active');
     }
     if (liveStatus) {

@@ -89,10 +89,11 @@
       const hasUnsafeMatch = matchedElements.some(match => !match.autoClickSafe);
       const hasUnmatchedAnswers = unmatchedAnswerCount > 0;
       const needsReview = hasUnsafeMatch || hasUnmatchedAnswers;
+      const platformName = location.hostname === 'play.blooket.com' ? 'Blooket' : 'Kahoot';
       let status;
       let detail;
       if (options.autoClick === false) {
-        status = needsReview ? 'Answer suggestion needs review' : 'Answer matched to Kahoot choices';
+        status = needsReview ? 'Answer suggestion needs review' : `Answer matched to ${platformName} choices`;
       } else {
         status = needsReview
           ? 'Answer matched · review before submitting'
@@ -166,7 +167,7 @@
         if (isMultiSelect && matchedIndices.length > 0) {
           waitForClickable(matchedElements[0].el, () => fireMultiClick(matchedIndices, elements), options);
         } else if (matchedIndices.length > 0) {
-          waitForClickable(matchedElements[0].el, () => fireClick(matchedIndices[0]), options);
+          waitForClickable(matchedElements[0].el, () => fireClick(matchedIndices[0], elements), options);
         }
       }
     }
@@ -193,12 +194,28 @@
         if (value) run();
         else {
           recordDiagnostic?.('ANSWER_NOT_CLICKABLE', { stage: 'dispatch' });
-          updateStatus('Error: answer button did not become clickable', 'Wait for Kahoot’s timer or loading state to finish, then retry.');
+          updateStatus('Error: answer button did not become clickable', 'Wait for the game timer or loading state to finish, then retry.');
         }
       });
     }
 
-    function fireClick(index) {
+    function fireClick(index, elements = []) {
+      if (location.hostname === 'play.blooket.com') {
+        const element = elements[index];
+        if (!element?.isConnected) {
+          recordDiagnostic?.('ANSWER_NO_CONTROLS', { stage: 'dispatch' });
+          updateStatus('Could not select answer', 'The visible Blooket answer control changed. Try the question again.');
+          return;
+        }
+        try {
+          element.click();
+          updateStatus('Answer selected on Blooket', 'The extension clicked the visible choice. Wait for Blooket’s game feedback.', { stage: 'sent' });
+        } catch (_) {
+          recordDiagnostic?.('ANSWER_NOT_CLICKABLE', { stage: 'dispatch' });
+          updateStatus('Could not select answer', 'Blooket did not accept the answer click. Select the highlighted choice manually.');
+        }
+        return;
+      }
       updateStatus('Sending answer to Kahoot…', 'Waiting for the Kahoot connection to accept the outgoing answer.', { stage: 'sending' });
       window.dispatchEvent(new CustomEvent('autoClickAnswer', { detail: index }));
     }

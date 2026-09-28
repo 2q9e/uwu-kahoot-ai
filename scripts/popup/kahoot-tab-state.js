@@ -1,11 +1,10 @@
+import { getQuizPlatform, isSupportedQuizUrl } from '../core/quiz-platform.js';
+
 export function isKahootUrl(url) {
-  try {
-    const hostname = new URL(url).hostname;
-    return hostname === 'kahoot.it' || hostname.endsWith('.kahoot.it');
-  } catch (_) {
-    return false;
-  }
+  return getQuizPlatform(url) === 'kahoot';
 }
+
+export { getQuizPlatform, isSupportedQuizUrl };
 
 export function resolveKahootTabSelection(tabs, previousTabId, { preferActive = false, selectionLocked = false } = {}) {
   const previousStillOpen = tabs.some(tab => tab.id === previousTabId);
@@ -17,9 +16,11 @@ export function resolveKahootTabSelection(tabs, previousTabId, { preferActive = 
   return { selectedTabId: next?.id ?? null, selectionLocked: false };
 }
 
-export function isCurrentKahootTabMessage(senderTab, selectedTab) {
+export function isCurrentQuizTabMessage(senderTab, selectedTab) {
   if (!senderTab || !selectedTab || senderTab.id !== selectedTab.id) return false;
-  if (senderTab.url && !isKahootUrl(senderTab.url)) return false;
-  if (selectedTab.url && !isKahootUrl(selectedTab.url)) return false;
+  if (senderTab.url && !isSupportedQuizUrl(senderTab.url)) return false;
+  if (selectedTab.url && !isSupportedQuizUrl(selectedTab.url)) return false;
   return !senderTab.url || !selectedTab.url || senderTab.url === selectedTab.url;
 }
+
+export const isCurrentKahootTabMessage = isCurrentQuizTabMessage;
