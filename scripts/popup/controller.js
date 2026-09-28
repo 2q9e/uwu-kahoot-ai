@@ -9,6 +9,7 @@ import { initializeLiveSession, setLiveStatus } from './live-session.js';
 import { initializePopupStats } from './stats-summary.js';
 import { createApiKeyManager } from './api-key-manager-ui.js';
 import { createModelCatalogUi } from './model-catalog-ui.js';
+import { getApiStatusPresentation } from './api-status-presentation.js';
 import { DEFAULT_AI_PROVIDER, DEPRECATED_MODELS } from '../core/constants.js';
 import { PREVIOUS_OPENROUTER_DEFAULT, PROVIDER_SETTINGS } from '../ai/provider-config.js';
 
@@ -147,51 +148,17 @@ openApiDashboardBtn?.addEventListener('click', async () => {
 
 function updateApiStatus() {
   if (!apiStatus) return;
-  if (apiSettingsState !== 'ready') {
-    const unavailable = apiSettingsState === 'unavailable';
-    apiStatus.textContent = unavailable ? 'Settings unavailable' : 'Checking keys…';
-    apiStatus.className = `api-pill ${unavailable ? 'missing' : 'checking'}`;
-    apiStatus.title = unavailable ? 'Extension storage could not be read. Use Retry settings to try again.' : 'Checking the configured provider keys.';
-    apiStatus.setAttribute('aria-busy', String(!unavailable));
-    return;
-  }
-  apiStatus.setAttribute('aria-busy', 'false');
-  if (providerKeyLoadErrors.has(currentProvider)) {
-    apiStatus.textContent = 'Key status unknown';
-    apiStatus.className = 'api-pill checking';
-    apiStatus.title = 'Saved keys for this provider could not be loaded. Check the key list message and try again.';
-    return;
-  }
-  const privateKeys = currentSettings.privateApiKeys || {};
-  const managedKeys = currentSettings.managedApiKeys || {};
-  const hasSavedPreferredKey = (managedKeys[currentProvider] || []).some(key => key.enabled);
-  const hasPrivatePreferredKey = !!privateKeys[currentProvider]?.length;
-  const fallbackKeyCount = Object.keys(PROVIDERS).reduce((total, provider) => provider === currentProvider
-    ? total
-    : total + (managedKeys[provider] || []).filter(key => key.enabled).length + (privateKeys[provider]?.length || 0), 0);
-  const hasFallbackKey = fallbackKeyCount > 0;
-  const fallbackEnabled = currentSettings.aiFallbackEnabled !== false;
-
-  if (hasSavedPreferredKey) {
-    const activeCount = (managedKeys[currentProvider] || []).filter(key => key.enabled).length;
-    const primaryKey = (managedKeys[currentProvider] || []).find(key => key.enabled);
-    const lastTest = primaryKey?.lastTest;
-    apiStatus.textContent = lastTest ? (lastTest.ok ? 'Key test passed' : 'Key test failed') : 'Key not tested';
-    apiStatus.className = `api-pill ${lastTest ? (lastTest.ok ? 'ok' : 'missing') : 'checking'}`;
-    apiStatus.title = `${activeCount} managed key${activeCount === 1 ? '' : 's'} enabled for the preferred provider. The first enabled key is tried first. ${lastTest ? `The first key was last checked ${new Date(lastTest.at).toLocaleString()}: ${lastTest.message}` : 'Run Test key to check provider access.'}`;
-  } else if (hasPrivatePreferredKey) {
-    apiStatus.textContent = 'Local key · not tested';
-    apiStatus.className = 'api-pill local';
-    apiStatus.title = 'A key is configured in the local-only source file and has not been verified.';
-  } else if (fallbackEnabled && hasFallbackKey) {
-    apiStatus.textContent = 'Fallback configured';
-    apiStatus.className = 'api-pill fallback';
-    apiStatus.title = `No key is enabled for the selected provider; ${fallbackKeyCount} enabled key${fallbackKeyCount === 1 ? '' : 's'} for another provider can be tried as fallback.`;
-  } else {
-    apiStatus.textContent = 'No active key';
-    apiStatus.className = 'api-pill missing';
-    apiStatus.title = 'No enabled key can currently be used. Add a key for the selected provider or enable a configured fallback.';
-  }
+  const presentation = getApiStatusPresentation({
+    state: apiSettingsState,
+    currentProvider,
+    currentSettings,
+    providers: PROVIDERS,
+    providerKeyLoadError: providerKeyLoadErrors.has(currentProvider)
+  });
+  apiStatus.textContent = presentation.text;
+  apiStatus.className = presentation.className;
+  apiStatus.title = presentation.title;
+  apiStatus.setAttribute('aria-busy', presentation.ariaBusy);
 }
 
 function updateDelayLabel(value) {

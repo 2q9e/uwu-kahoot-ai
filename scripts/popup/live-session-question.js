@@ -5,6 +5,10 @@ const TYPE_LABELS = {
   pin_it: 'Pin', jumble: 'Jumble', slider: 'Slider', open_ended: 'Open'
 };
 const PROVIDER_LABELS = { openai: 'OpenAI', gemini: 'Google AI Studio', openrouter: 'OpenRouter' };
+const SEND_FAILED_MESSAGES = {
+  pin_it: 'Pin stays on the page · check it and submit manually if needed',
+  slider: 'Slider value stays on the page · check it and submit manually if needed'
+};
 
 export function createLiveSessionQuestion({
   liveStatus,
@@ -40,7 +44,7 @@ export function createLiveSessionQuestion({
       highlighted: 'Answer matched · highlighted on the page',
       sending: 'Sending answer over the Kahoot connection…',
       sent: 'WebSocket send succeeded · Kahoot acceptance is unconfirmed',
-      send_failed: 'Kahoot connection is not ready · the answer remains available on the page'
+      send_failed: SEND_FAILED_MESSAGES[handoff.questionType] || 'Kahoot connection is not ready · the answer remains available on the page'
     }[handoff.stage];
     if (!status) return;
     answerHandoff.textContent = status;

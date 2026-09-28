@@ -22,3 +22,21 @@ function wsSend(payload) {
   ws.send(JSON.stringify(payload));
   return true;
 }
+
+function sendAnswerOverWebSocket(content) {
+  const questionType = content.type;
+  let sent = false;
+  try {
+    sent = wsSend(makePayload(content));
+  } catch (error) {
+    warn(`${questionType} answer send failed`, error?.name || 'Error');
+  }
+  window.dispatchEvent(new CustomEvent('kahootAnswerDispatchResult', {
+    detail: {
+      sent,
+      questionType,
+      questionIndex: content.questionIndex ?? window.kahootQuestionIndex
+    }
+  }));
+  return sent;
+}

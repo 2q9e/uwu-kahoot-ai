@@ -258,6 +258,24 @@
     return true;
   }
 
+  function sendAnswerOverWebSocket(content) {
+    const questionType = content.type;
+    let sent = false;
+    try {
+      sent = wsSend(makePayload(content));
+    } catch (error) {
+      warn(`${questionType} answer send failed`, error?.name || 'Error');
+    }
+    window.dispatchEvent(new CustomEvent('kahootAnswerDispatchResult', {
+      detail: {
+        sent,
+        questionType,
+        questionIndex: content.questionIndex ?? window.kahootQuestionIndex
+      }
+    }));
+    return sent;
+  }
+
   function waitForDomCondition(check, questionIndex, timeout = 1600) {
     const read = () => {
       if (!isCurrentQuestion(questionIndex)) return null;
@@ -386,19 +404,13 @@
   }
 
   window.sendAutoClickMessage = function (choice) {
-    let sent = false;
-    try { sent = wsSend(makePayload({ type: 'quiz', choice, questionIndex: window.kahootQuestionIndex })); } catch (_) {}
-    window.dispatchEvent(new CustomEvent('kahootAnswerDispatchResult', {
-      detail: { sent, questionIndex: window.kahootQuestionIndex }
-    }));
+    sendAnswerOverWebSocket({ type: 'quiz', choice, questionIndex: window.kahootQuestionIndex });
   };
 
   window.sendMultiSelectMessage = function (choices) {
-    let sent = false;
-    try { sent = wsSend(makePayload({ type: 'multiple_select_quiz', choice: choices, questionIndex: window.kahootQuestionIndex })); } catch (_) {}
-    window.dispatchEvent(new CustomEvent('kahootAnswerDispatchResult', {
-      detail: { sent, questionIndex: window.kahootQuestionIndex }
-    }));
+    sendAnswerOverWebSocket({
+      type: 'multiple_select_quiz', choice: choices, questionIndex: window.kahootQuestionIndex
+    });
   };
 
   window.addEventListener('autoClickAnswer', e => window.sendAutoClickMessage(e.detail));
@@ -526,10 +538,12 @@
       log('Pin fallback: pointer placement used');
     }
 
-    wsSend(makePayload({
+    const sent = sendAnswerOverWebSocket({
       type: 'pin_it', pinX: placement.normalizedX, pinY: placement.normalizedY,
       questionIndex: window.kahootQuestionIndex
-    }));
+    });
+    if (sent) log('Pin coordinates sent through WebSocket');
+    else warn('Pin coordinates were not sent through WebSocket');
 
     log(`Pin placement complete (React state updated: ${pinSet})`);
 
@@ -655,12 +669,13 @@
   window.addEventListener('sliderWSSend', function (event) {
     const { value, questionIndex } = event.detail;
     if (!isCurrentQuestion(questionIndex)) return;
-    log('Slider answer sent through WebSocket');
-    wsSend(makePayload({
+    const sent = sendAnswerOverWebSocket({
       type: 'slider',
       choice: value,
       questionIndex: window.kahootQuestionIndex
-    }));
+    });
+    if (sent) log('Slider answer sent through WebSocket');
+    else warn('Slider answer was not sent through WebSocket');
   });
 
   window.addEventListener('autoSliderAnswer', function (event) {
@@ -700,12 +715,13 @@
     }
 
     if (!skipWS) {
-      wsSend(makePayload({
+      const sent = sendAnswerOverWebSocket({
         type: 'slider',
         choice: clamped,
         questionIndex: window.kahootQuestionIndex
-      }));
-      log('Slider answer sent through WebSocket');
+      });
+      if (sent) log('Slider answer sent through WebSocket');
+      else warn('Slider answer was not sent through WebSocket');
     }
 
     (async () => {

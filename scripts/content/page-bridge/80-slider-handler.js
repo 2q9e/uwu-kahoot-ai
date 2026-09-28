@@ -1,12 +1,13 @@
 window.addEventListener('sliderWSSend', function (event) {
   const { value, questionIndex } = event.detail;
   if (!isCurrentQuestion(questionIndex)) return;
-  log('Slider answer sent through WebSocket');
-  wsSend(makePayload({
+  const sent = sendAnswerOverWebSocket({
     type: 'slider',
     choice: value,
     questionIndex: window.kahootQuestionIndex
-  }));
+  });
+  if (sent) log('Slider answer sent through WebSocket');
+  else warn('Slider answer was not sent through WebSocket');
 });
 
 window.addEventListener('autoSliderAnswer', function (event) {
@@ -46,12 +47,13 @@ window.addEventListener('autoSliderAnswer', function (event) {
   }
 
   if (!skipWS) {
-    wsSend(makePayload({
+    const sent = sendAnswerOverWebSocket({
       type: 'slider',
       choice: clamped,
       questionIndex: window.kahootQuestionIndex
-    }));
-    log('Slider answer sent through WebSocket');
+    });
+    if (sent) log('Slider answer sent through WebSocket');
+    else warn('Slider answer was not sent through WebSocket');
   }
 
   (async () => {

@@ -48,6 +48,7 @@
         "scripts/content/answer-actions.js",
         "scripts/content/status-ui.js",
         "scripts/content/question-preparation.js",
+        "scripts/content/runtime-message-handler.js",
         "scripts/content/controller.js"
       ],
       "run_at": "document_start",

@@ -119,10 +119,12 @@ window.addEventListener('autoPinAnswer', function (event) {
     log('Pin fallback: pointer placement used');
   }
 
-  wsSend(makePayload({
+  const sent = sendAnswerOverWebSocket({
     type: 'pin_it', pinX: placement.normalizedX, pinY: placement.normalizedY,
     questionIndex: window.kahootQuestionIndex
-  }));
+  });
+  if (sent) log('Pin coordinates sent through WebSocket');
+  else warn('Pin coordinates were not sent through WebSocket');
 
   log(`Pin placement complete (React state updated: ${pinSet})`);
 

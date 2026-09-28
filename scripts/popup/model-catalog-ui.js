@@ -4,6 +4,7 @@ import { createBackupModelUi } from './backup-model-ui.js';
 import { createModelCatalogRenderer } from './model-catalog-renderer.js';
 import { createProviderFieldsLoader } from './provider-fields-loader.js';
 import { CATALOG_STORAGE_PREFIX, createProviderModelCatalog } from './provider-model-catalog.js';
+import { chooseFastestModel, getFastModelOptions } from './fast-model-selection.js';
 
 const MODEL_REASONING_STORAGE_KEY = 'modelReasoningEffort';
 
@@ -186,41 +187,18 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
   });
   function populateFastModelOptions(provider, models = [], savedModel = '') {
     if (!fastBinaryModelSelect) return;
-    const selected = String(savedModel || '').trim();
-    const automatic = document.createElement('option');
-    automatic.value = '';
-    automatic.textContent = provider === 'openrouter'
-      ? 'Automatic · fastest measured free model'
-      : provider === 'gemini'
-        ? 'Automatic · fastest measured / Flash-Lite'
-        : 'Automatic · primary model';
-    fastBinaryModelSelect.replaceChildren(automatic);
-    const available = models.filter(model => model?.id && model.supportsAnswers !== false);
     const measuredGemini = provider === 'gemini' ? providerCatalog?.getMeasuredGeminiSpeeds() || {} : {};
-    for (const model of available) {
+    const fastModelOptions = getFastModelOptions(provider, models, savedModel, measuredGemini);
+    const fragment = document.createDocumentFragment();
+    for (const { value, text } of fastModelOptions.options) {
       const option = document.createElement('option');
-      option.value = model.id;
-      const measuredSpeed = Number(model.speed) > 0 ? Number(model.speed) : Number(measuredGemini[model.id]?.tokensPerSecond);
-      const speed = measuredSpeed > 0
-        ? ` · ${Math.round(measuredSpeed)} ${provider === 'openrouter' ? 'endpoint p50' : 'stream'} tok/s`
-        : '';
-      option.textContent = `${model.name || model.id}${speed} — ${model.id}`;
-      fastBinaryModelSelect.append(option);
+      option.value = value;
+      option.textContent = text;
+      fragment.append(option);
     }
-    if (selected && !available.some(model => model.id === selected)) {
-      const saved = document.createElement('option');
-      saved.value = selected;
-      saved.textContent = `Saved override — ${selected}`;
-      fastBinaryModelSelect.append(saved);
-    }
-    fastBinaryModelSelect.value = selected;
-    if (fastBinaryModelHelp) {
-      fastBinaryModelHelp.textContent = provider === 'openrouter'
-        ? 'Automatic chooses the cached free model with the highest recent throughput. Until a catalog is loaded, it uses the configured OpenRouter fast free model.'
-        : provider === 'gemini'
-          ? 'Automatic uses the fastest Gemini model measured in this browser. Until then it uses the configured Gemini fast model.'
-          : 'Automatic uses your selected primary model with the lowest reasoning effort.';
-    }
+    fastBinaryModelSelect.replaceChildren(fragment);
+    fastBinaryModelSelect.value = fastModelOptions.selected;
+    if (fastBinaryModelHelp) fastBinaryModelHelp.textContent = fastModelOptions.help;
   }
   providerCatalog = createProviderModelCatalog({
     providers,
@@ -319,35 +297,18 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
       const provider = getCurrentProvider();
       const config = providers[provider] || providers[defaultProvider];
       const models = providerCatalog.getModels(provider).filter(model => model?.supportsAnswers !== false);
-      let fastest = null;
-      let source = '';
-      if (provider === 'gemini') {
-        const measured = providerCatalog.getMeasuredGeminiSpeeds();
-        fastest = models.filter(model => Number(measured[model.id]?.tokensPerSecond) > 0)
-          .sort((a, b) => Number(measured[b.id].tokensPerSecond) - Number(measured[a.id].tokensPerSecond))[0] || null;
-        if (fastest) source = 'your Gemini speed checks';
-      } else {
-        fastest = models.filter(model => Number(model.speed) > 0)
-          .sort((a, b) => Number(b.speed) - Number(a.speed))[0] || null;
-        if (fastest) source = provider === 'openrouter' ? 'recent OpenRouter throughput readings' : 'provider catalog speed data';
-      }
-      if (!fastest) {
-        const firstFreeModel = provider === 'openrouter' ? models[0] : null;
-        const id = firstFreeModel?.id || config.defaultModel;
-        if (modelInput) modelInput.value = id;
-        source = provider === 'openai'
-          ? 'the provider default; per-model speed is not published'
-          : firstFreeModel
-            ? 'the first free model in the catalog because no endpoint speed reading is cached yet'
-            : 'the provider default because no speed reading is available yet';
-      } else if (modelInput) {
-        modelInput.value = fastest.id;
-      }
+      const choice = chooseFastestModel(
+        provider,
+        models,
+        provider === 'gemini' ? providerCatalog.getMeasuredGeminiSpeeds() : {},
+        config.defaultModel
+      );
+      if (modelInput) modelInput.value = choice.model;
       const backups = backupModelUi.currentBackupSelection();
       backupModelUi.populateBackupSlots(models, backups, modelInput?.value || config.defaultModel);
       refreshSelectionSummary();
       modelRenderer.renderModelCatalog();
-      setAiFeedback(`Selected ${modelInput?.value || config.defaultModel} using ${source}. Save model settings to apply it.`, 'success');
+      setAiFeedback(`Selected ${modelInput?.value || config.defaultModel} using ${choice.source}. Save model settings to apply it.`, 'success');
     });
   }
 
