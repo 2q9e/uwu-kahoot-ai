@@ -109,6 +109,19 @@ let latestSettingsChanges = {};
 let initialSettingsLoaded = false;
 let initialSettingsPromise;
 
+const CONTENT_SETTING_NORMALIZERS = {
+  highlightOption: value => value !== false,
+  autoClickOption: value => value !== false,
+  pinHighlightOption: value => value !== false,
+  pinAutoClickOption: value => !!value,
+  answerDelay: value => value ?? 0,
+  silentMode: value => !!value
+};
+
+function normalizeContentSettings(values) {
+  return Object.fromEntries(Object.entries(CONTENT_SETTING_NORMALIZERS).map(([key, normalize]) => [key, normalize(values[key])]));
+}
+
 function advanceSubmitNonce() {
   submitNonce++;
   domWaiter.cancelAll();
@@ -122,14 +135,7 @@ function refreshSettings() {
       s => {
         if (chrome.runtime.lastError) recordDiagnostic('EXTENSION_STORAGE_ERROR', { stage: 'settings' });
         const values = settingsRevision === revisionAtRead ? (s || {}) : { ...(s || {}), ...latestSettingsChanges };
-        cachedSettings = {
-          highlightOption: values.highlightOption !== false,
-          autoClickOption: values.autoClickOption !== false,
-          pinHighlightOption: values.pinHighlightOption !== false,
-          pinAutoClickOption: !!values.pinAutoClickOption,
-          answerDelay: values.answerDelay ?? 0,
-          silentMode: !!values.silentMode
-        };
+        cachedSettings = normalizeContentSettings(values);
         resolve(cachedSettings);
       }
     );
@@ -139,16 +145,13 @@ function refreshSettings() {
 chrome.storage.onChanged.addListener((changes, ns) => {
   if (ns !== 'sync') return;
   settingsRevision += 1;
-  for (const key of ['highlightOption', 'autoClickOption', 'pinHighlightOption', 'pinAutoClickOption', 'answerDelay', 'silentMode']) {
-    if (key in changes) latestSettingsChanges[key] = changes[key].newValue;
+  for (const [key, normalize] of Object.entries(CONTENT_SETTING_NORMALIZERS)) {
+    if (!(key in changes)) continue;
+    const value = changes[key].newValue;
+    latestSettingsChanges[key] = value;
+    cachedSettings[key] = normalize(value);
   }
-  if ('highlightOption' in changes) cachedSettings.highlightOption = changes.highlightOption.newValue !== false;
-  if ('autoClickOption' in changes) cachedSettings.autoClickOption = changes.autoClickOption.newValue !== false;
-  if ('pinHighlightOption' in changes) cachedSettings.pinHighlightOption = changes.pinHighlightOption.newValue !== false;
-  if ('pinAutoClickOption' in changes) cachedSettings.pinAutoClickOption = !!changes.pinAutoClickOption.newValue;
-  if ('answerDelay' in changes) cachedSettings.answerDelay = changes.answerDelay.newValue ?? 0;
-  if ('silentMode' in changes) cachedSettings.silentMode = !!changes.silentMode.newValue;
-  if (changes.silentMode?.newValue) {
+  if (cachedSettings.silentMode) {
     removeStatusIndicator();
     document.getElementById('uwukahootai-timer')?.remove();
   }
