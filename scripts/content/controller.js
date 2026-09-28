@@ -21,6 +21,7 @@ let currentSolveId = null;
 let currentAnswer = null;
 let questionState = 'idle';
 let questionError = null;
+let currentQuestionReadiness = null;
 let activeRequestId = null;
 let lastSentHash = null;
 let lastPreparedHash = null;
@@ -175,6 +176,7 @@ function clearCurrentQuestion(status) {
   currentAnswer = null;
   questionState = 'idle';
   questionError = null;
+  currentQuestionReadiness = null;
   activeRequestId = null;
   lastSentHash = null;
   lastPreparedHash = null;
@@ -200,7 +202,11 @@ function sendQuestionToBackend(question) {
   questionError = null;
   const shortQ = question.title.length > 60 ? question.title.slice(0, 57) + '...' : question.title;
   updateStatus('Sending to AI...', shortQ);
-  broadcastToPopup('updateQuestion', { question: { title: question.title, type: question.type, choices: question.choices || [] } });
+  broadcastToPopup('updateQuestion', {
+    question: { title: question.title, type: question.type, choices: question.choices || [] },
+    state: 'processing',
+    readiness: currentQuestionReadiness
+  });
   chrome.runtime.sendMessage({ action: 'processQuestion', question, requestId: lastSentHash, solveId: currentSolveId }, response => {
     if (chrome.runtime.lastError) {
       updateStatus('Error: ' + chrome.runtime.lastError.message);
@@ -257,7 +263,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
     case 'getQuestion':
       if (!currentQuestion) return false;
-      sendResponse({ question: currentQuestion, answer: currentAnswer, state: questionState, error: questionError });
+      sendResponse({ question: currentQuestion, answer: currentAnswer, state: questionState, error: questionError, readiness: currentQuestionReadiness });
       break;
 
     case 'showError':
@@ -410,6 +416,8 @@ window.addEventListener('kahootQuestionParsed', async (event) => {
   const isSlider = q.type === 'slider';
   const isOpenEnded = q.type === 'open_ended';
   const isChoiceQuestion = CHOICE_QUESTION_TYPES.has(q.type);
+  const expectedChoiceCount = isChoiceQuestion ? getExpectedChoiceCount(q.type, q.choices) : 0;
+  const dataChoiceCount = Array.isArray(q.choices) ? q.choices.filter(choice => String(choice ?? '').trim()).length : 0;
 
   if (!isPin && !isJumble && !isSlider && !isOpenEnded && !isChoiceQuestion) return;
 
@@ -441,12 +449,20 @@ window.addEventListener('kahootQuestionParsed', async (event) => {
   currentAnswer = null;
   questionState = isChoiceQuestion ? 'waiting_for_choices' : 'processing';
   questionError = null;
+  currentQuestionReadiness = {
+    choicesRequired: isChoiceQuestion,
+    dataChoiceCount,
+    expectedChoiceCount: isChoiceQuestion ? Math.max(2, expectedChoiceCount) : 0,
+    visibleChoiceCount: 0,
+    choicesReady: !isChoiceQuestion
+  };
   advanceSubmitNonce();
   const preparationNonce = submitNonce;
   removeTimerOverlay();
   broadcastToPopup('updateQuestion', {
     question: { title: q.title, type: q.type, choices: q.choices || [] },
-    state: questionState
+    state: questionState,
+    readiness: currentQuestionReadiness
   });
   updateStatus('Preparing question…');
   const settingsPromise = initialSettingsLoaded ? null : initialSettingsPromise;
@@ -476,9 +492,24 @@ window.addEventListener('kahootQuestionParsed', async (event) => {
   answerFeedbackUi.cleanupOverlays();
 
   if (isChoiceQuestion) {
-    updateStatus('Waiting for on-screen answers…', 'The AI request starts after Kahoot displays the choices.');
+    const requiredChoices = Math.max(2, expectedChoiceCount);
+    updateStatus('Waiting for on-screen answers…', dataChoiceCount
+      ? `Kahoot data includes ${dataChoiceCount} choice${dataChoiceCount === 1 ? '' : 's'}. Checking the page for the complete set before sending anything to AI.`
+      : 'No answer choices have arrived yet. Checking the page before sending anything to AI.');
     const choiceWaitNonce = submitNonce;
-    const expectedChoices = getExpectedChoiceCount(q.type, q.choices);
+    const expectedChoices = expectedChoiceCount;
+    currentQuestionReadiness = {
+      choicesRequired: true,
+      dataChoiceCount,
+      expectedChoiceCount: requiredChoices,
+      visibleChoiceCount: 0,
+      choicesReady: false
+    };
+    broadcastToPopup('updateQuestion', {
+      question: { title: q.title, type: q.type, choices: q.choices || [] },
+      state: 'waiting_for_choices',
+      readiness: currentQuestionReadiness
+    });
     const domChoices = await pollForAnswerChoices(expectedChoices, choiceWaitNonce, q.choices, previousQuestionChoices);
     if (choiceWaitNonce !== submitNonce || lastPreparedHash !== incomingHash) {
       log('Discarding answer choices from an outdated question.');
@@ -492,11 +523,35 @@ window.addEventListener('kahootQuestionParsed', async (event) => {
       currentSolveId = null;
       currentQuestion.choices = q.choices || [];
       questionState = 'waiting_for_choices';
-      const requirement = expectedChoices > 0 ? `the ${expectedChoices} answer choices in Kahoot's question data` : 'at least two readable answer choices';
-      updateStatus('Waiting for answer choices', `Kahoot has not shown ${requirement} yet. No AI request was sent.`);
+      currentQuestionReadiness = {
+        choicesRequired: true,
+        dataChoiceCount,
+        expectedChoiceCount: requiredChoices,
+        visibleChoiceCount: domChoices.length,
+        choicesReady: false
+      };
+      broadcastToPopup('updateQuestion', {
+        question: { title: q.title, type: q.type, choices: currentQuestion.choices },
+        state: 'waiting_for_choices',
+        readiness: currentQuestionReadiness
+      });
+      updateStatus('Waiting for answer choices', `Kahoot data had ${dataChoiceCount} choice${dataChoiceCount === 1 ? '' : 's'}; the page currently shows ${domChoices.length}. At least ${requiredChoices} readable choices are needed. No AI request was sent.`);
       return;
     }
     currentQuestion.choices = q.choices;
+    currentQuestionReadiness = {
+      choicesRequired: true,
+      dataChoiceCount,
+      expectedChoiceCount: requiredChoices,
+      visibleChoiceCount: q.choices.length,
+      choicesReady: true
+    };
+    broadcastToPopup('updateQuestion', {
+      question: { title: q.title, type: q.type, choices: q.choices },
+      state: 'processing',
+      readiness: currentQuestionReadiness
+    });
+    updateStatus('Answer choices ready', `${q.choices.length} choices are ready. Sending the question and choices to the selected provider.`);
   }
 
   if (isJumble) {

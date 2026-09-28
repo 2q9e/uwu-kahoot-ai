@@ -3,6 +3,7 @@ import { createLiveSessionTabs } from './live-session-tabs.js';
 
 const liveStatus = document.getElementById('liveStatus');
 const liveDetail = document.getElementById('liveDetail');
+const questionReadiness = document.getElementById('questionReadiness');
 const liveEmpty = document.getElementById('liveEmpty');
 const liveQuestion = document.getElementById('liveQuestion');
 const questionText = document.getElementById('questionText');
@@ -18,6 +19,7 @@ const reloadKahootTabBtn = document.getElementById('reloadKahootTab');
 const question = createLiveSessionQuestion({
   liveStatus,
   liveDetail,
+  questionReadiness,
   liveEmpty,
   liveQuestion,
   questionText,

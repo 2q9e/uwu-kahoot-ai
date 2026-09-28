@@ -8,6 +8,7 @@ const TYPE_LABELS = {
 export function createLiveSessionQuestion({
   liveStatus,
   liveDetail,
+  questionReadiness,
   liveEmpty,
   liveQuestion,
   questionText,
@@ -16,6 +17,33 @@ export function createLiveSessionQuestion({
   tabsApi = globalThis.chrome?.tabs
 }) {
   let hasCurrentQuestion = false;
+
+  function showReadiness(readiness) {
+    if (!questionReadiness) return;
+    if (!readiness?.choicesRequired) {
+      questionReadiness.textContent = '';
+      questionReadiness.classList.add('hidden');
+      questionReadiness.removeAttribute('data-ready');
+      return;
+    }
+    const expected = Math.max(2, Number(readiness.expectedChoiceCount) || 2);
+    const received = Math.max(0, Number(readiness.dataChoiceCount) || 0);
+    const visible = Math.max(0, Number(readiness.visibleChoiceCount) || 0);
+    if (readiness.choicesReady) {
+      questionReadiness.textContent = `Choice set ready · ${visible || received} answer choices`;
+      questionReadiness.dataset.ready = 'true';
+    } else if (visible > 0) {
+      questionReadiness.textContent = `Page choices · ${visible} of ${expected} required · waiting before AI request`;
+      questionReadiness.dataset.ready = 'false';
+    } else if (received > 0) {
+      questionReadiness.textContent = `${received} choice${received === 1 ? '' : 's'} received · checking the page for at least ${expected}`;
+      questionReadiness.dataset.ready = 'false';
+    } else {
+      questionReadiness.textContent = `No answer choices received · checking the page for at least ${expected}`;
+      questionReadiness.dataset.ready = 'false';
+    }
+    questionReadiness.classList.remove('hidden');
+  }
 
   function setLiveStatus(state, label, detail = '') {
     if (liveStatus) {
@@ -26,7 +54,7 @@ export function createLiveSessionQuestion({
     if (retryAnswerBtn) retryAnswerBtn.disabled = !hasCurrentQuestion || state === 'processing' || state === 'waiting_for_choices';
   }
 
-  function showQuestion(title, type) {
+  function showQuestion(title, type, readiness) {
     if (!title) return;
     hasCurrentQuestion = true;
     liveEmpty?.classList.add('hidden');
@@ -37,6 +65,7 @@ export function createLiveSessionQuestion({
       questionText.textContent = badge + title;
       questionText.classList.add('active');
     }
+    showReadiness(readiness);
   }
 
   function showAnswer(answer) {
@@ -61,12 +90,21 @@ export function createLiveSessionQuestion({
     setLiveStatus('processing', 'Finding an answer…', 'The selected provider and any enabled fallback providers may receive this question.');
   }
 
-  function setWaitingForChoices() {
+  function setWaitingForChoices(readiness) {
     if (answerText) {
       answerText.textContent = 'Waiting for Kahoot to show the answer options…';
       answerText.classList.remove('thinking', 'active');
     }
-    setLiveStatus('waiting_for_choices', 'Waiting for answer options', 'The AI request starts after the full answer set is visible on this player tab.');
+    const expected = Math.max(2, Number(readiness?.expectedChoiceCount) || 2);
+    const received = Math.max(0, Number(readiness?.dataChoiceCount) || 0);
+    const visible = Math.max(0, Number(readiness?.visibleChoiceCount) || 0);
+    const detail = visible
+      ? `The page shows ${visible} of at least ${expected} readable choices. No AI request has been sent.`
+      : received
+        ? `${received} choice${received === 1 ? '' : 's'} arrived in Kahoot data. Checking the page for at least ${expected}; no AI request has been sent.`
+        : `No choices arrived yet. Checking the page for at least ${expected}; no AI request has been sent.`;
+    setLiveStatus('waiting_for_choices', 'Waiting for answer options', detail);
+    showReadiness(readiness);
   }
 
   function clearSelectedQuestion() {
@@ -74,6 +112,7 @@ export function createLiveSessionQuestion({
     if (retryAnswerBtn) retryAnswerBtn.disabled = true;
     liveEmpty?.classList.remove('hidden');
     liveQuestion?.classList.add('hidden');
+    questionReadiness?.classList.add('hidden');
     if (questionText) questionText.textContent = '';
     if (answerText) {
       answerText.textContent = 'Waiting for a response';
@@ -121,10 +160,10 @@ export function createLiveSessionQuestion({
       if (tabSession.getSelectedTabId() !== targetTabId) return;
       if (tabSession.getTabs().find(candidate => candidate.id === targetTabId)?.url !== tab.url) return;
       if (response?.question) {
-        showQuestion(response.question.title, response.question.type);
+        showQuestion(response.question.title, response.question.type, response.readiness);
         if (response.answer) showAnswer(response.answer);
         else if (response.state === 'error') setLiveStatus('error', 'Answer failed', response.error || 'Try again or check your provider settings.');
-        else if (response.state === 'waiting_for_choices') setWaitingForChoices();
+        else if (response.state === 'waiting_for_choices') setWaitingForChoices(response.readiness);
         else if (response.state === 'processing') setThinking();
         else setLiveStatus('ready', 'Question detected', 'Waiting for an answer.');
       } else {
@@ -155,8 +194,8 @@ export function createLiveSessionQuestion({
       setLiveStatus('idle', 'Waiting for a question', request.status || '');
     }
     if (request.action === 'updateQuestion' && request.question) {
-      showQuestion(request.question.title, request.question.type);
-      if (request.state === 'waiting_for_choices') setWaitingForChoices();
+      showQuestion(request.question.title, request.question.type, request.readiness);
+      if (request.state === 'waiting_for_choices') setWaitingForChoices(request.readiness);
       else setThinking();
     }
     if (request.action === 'updateAnswer' && request.answer) showAnswer(request.answer);
