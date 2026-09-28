@@ -107,7 +107,6 @@ function parseQuestionContent(raw) {
       }
       log(`Jumble tiles received: ${choices.length}`);
       window.kahootWSTiles = [...choices];
-      if (choices.length === 0) return;
     } else if (!isPin && !isSlider && !isOpenEnded) {
       const rawChoices = getRawChoices(content);
       choices = rawChoices.map(choice => extractChoiceText(choice));
