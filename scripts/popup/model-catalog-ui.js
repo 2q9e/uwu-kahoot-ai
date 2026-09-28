@@ -64,7 +64,14 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
   function setProviderFieldsLoading(loading) {
     providerFieldsLoading = Boolean(loading);
     for (const panel of providerFormPanels) {
-      panel.inert = providerFieldsLoading;
+      if (panel.matches('details.api-advanced-panel')) {
+        panel.inert = false;
+        for (const child of panel.children) {
+          if (child.tagName !== 'SUMMARY') child.inert = providerFieldsLoading;
+        }
+      } else {
+        panel.inert = providerFieldsLoading;
+      }
       if (providerFieldsLoading) panel.setAttribute('aria-busy', 'true');
       else panel.removeAttribute('aria-busy');
     }
