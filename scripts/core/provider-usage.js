@@ -13,7 +13,7 @@ export async function readProviderUsage() {
   }
 }
 
-export function recordProviderUsage(provider, model, status, usage = {}) {
+export function recordProviderUsageInBackground(provider, model, status, usage = {}) {
   if (!['openai', 'gemini', 'openrouter'].includes(provider)) return Promise.resolve();
   const update = async () => {
     try {
@@ -44,4 +44,16 @@ export function recordProviderUsage(provider, model, status, usage = {}) {
   const write = usageWriteQueue.then(update, update);
   usageWriteQueue = write.then(() => undefined, () => undefined);
   return write;
+}
+
+export function recordProviderUsage(provider, model, status, usage = {}) {
+  if (typeof document === 'undefined') {
+    return recordProviderUsageInBackground(provider, model, status, usage);
+  }
+  try {
+    return Promise.resolve(chrome.runtime.sendMessage({ action: 'recordProviderUsage', provider, model, status, usage }))
+      .catch(() => {});
+  } catch (_) {
+    return Promise.resolve();
+  }
 }

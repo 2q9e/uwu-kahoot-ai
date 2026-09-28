@@ -1,5 +1,6 @@
 
 import { DEFAULT_MODEL, DEFAULT_VISION_MODEL, DEPRECATED_MODELS } from '../core/constants.js';
+import { recordProviderUsageInBackground } from '../core/provider-usage.js';
 import { AI_REQUEST_BUDGET_MS } from '../ai/provider-client.js';
 import { answerJumbleQuestion, answerMultiSelect, answerOpenEndedQuestion, answerPinQuestion, answerQuestion, answerSliderQuestion } from '../ai/answer-questions.js';
 import { classifyAiFailure, createDiagnosticRecord, diagnosticPresentation, DIAGNOSTICS_STORAGE_KEY } from './diagnostics.js';
@@ -125,6 +126,12 @@ function isKahootTab(url) {
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === 'recordProviderUsage') {
+    recordProviderUsageInBackground(msg.provider, msg.model, msg.status, msg.usage || {})
+      .then(() => sendResponse({ success: true }));
+    return true;
+  }
+
   if (msg.action === 'recordDiagnostic') {
     recordDiagnostic(msg.code, msg.metadata || {}).then(() => sendResponse({ success: true }));
     return true;
