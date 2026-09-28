@@ -12,6 +12,51 @@ const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const OPENROUTER_CATALOG_CACHE_KEY = 'uwuKahootModelCatalogV1_openrouter';
+const GEMINI_THINKING_TOKEN_PADDING = Object.freeze({
+  none: 128,
+  minimal: 128,
+  low: 256,
+  medium: 512,
+  high: 1024,
+  xhigh: 2048,
+  max: 2048
+});
+const OPENAI_REASONING_TOKEN_PADDING = Object.freeze({
+  none: 200,
+  minimal: 200,
+  low: 500,
+  medium: 1200,
+  high: 2500,
+  xhigh: 4000,
+  max: 12000
+});
+
+function isOpenAIReasoningModel(model) {
+  return /^(?:gpt-[56](?:[.-]|$)|o[134](?:-|$))/i.test(model.trim());
+}
+
+function createGeminiGenerationConfig(model, effort, maxTokens, stop) {
+  const generationConfig = {
+    maxOutputTokens: maxTokens + (GEMINI_THINKING_TOKEN_PADDING[effort] ?? 128)
+  };
+  const thinkingConfig = geminiThinkingConfig(model, effort);
+  if (thinkingConfig) generationConfig.thinkingConfig = thinkingConfig;
+  if (stop?.length) generationConfig.stopSequences = stop;
+  return generationConfig;
+}
+
+function addOpenAIReasoningConfig(body, model, maxTokens, effort) {
+  const apiEffort = openAIReasoningEffort(effort, model);
+  body.max_completion_tokens = maxTokens + (OPENAI_REASONING_TOKEN_PADDING[apiEffort] ?? 500);
+  body.reasoning_effort = apiEffort;
+}
+
+async function addOpenRouterRouting(body, model, effort) {
+  body.provider = { sort: 'throughput' };
+  if (await openRouterModelSupportsReasoning(model)) {
+    body.reasoning = { effort: openRouterReasoningEffort(effort) };
+  }
+}
 
 function chatCompletionsUrl(provider) {
   return provider === 'openrouter' ? OPENROUTER_URL : OPENAI_URL;
@@ -61,11 +106,7 @@ export async function callModelOnce(provider, apiKey, model, userPrompt, opts = 
   const effort = normalizeReasoningEffort(reasoningEffort);
 
   if (provider === 'gemini') {
-    const thinkingPads = { none: 128, minimal: 128, low: 256, medium: 512, high: 1024, xhigh: 2048, max: 2048 };
-    const generationConfig = { maxOutputTokens: maxTokens + (thinkingPads[effort] ?? 128) };
-    const thinkingConfig = geminiThinkingConfig(model, effort);
-    if (thinkingConfig) generationConfig.thinkingConfig = thinkingConfig;
-    if (stop?.length) generationConfig.stopSequences = stop;
+    const generationConfig = createGeminiGenerationConfig(model, effort, maxTokens, stop);
     const body = {
       systemInstruction: { parts: [{ text: systemPrompt }] },
       contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
@@ -80,24 +121,17 @@ export async function callModelOnce(provider, apiKey, model, userPrompt, opts = 
     return { choices: [{ message: { content: text } }] };
   }
 
-  const isOpenAIReasoning = provider === 'openai' && /^(?:gpt-[56](?:[.-]|$)|o[134](?:-|$))/i.test(model.trim());
+  const usesOpenAIReasoning = provider === 'openai' && isOpenAIReasoningModel(model);
   const body = {
     model,
     messages: [
-      { role: isOpenAIReasoning ? 'developer' : 'system', content: systemPrompt },
+      { role: usesOpenAIReasoning ? 'developer' : 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }
     ]
   };
-  if (provider === 'openrouter') {
-    body.provider = { sort: 'throughput' };
-    if (await openRouterModelSupportsReasoning(model)) body.reasoning = { effort: openRouterReasoningEffort(effort) };
-  }
-  if (isOpenAIReasoning) {
-    const apiEffort = openAIReasoningEffort(effort, model);
-    const reasoningPads = { none: 200, minimal: 200, low: 500, medium: 1200, high: 2500, xhigh: 4000, max: 12000 };
-    const reasoningPad = reasoningPads[apiEffort] ?? 500;
-    body.max_completion_tokens = maxTokens + reasoningPad;
-    body.reasoning_effort = apiEffort;
+  if (provider === 'openrouter') await addOpenRouterRouting(body, model, effort);
+  if (usesOpenAIReasoning) {
+    addOpenAIReasoningConfig(body, model, maxTokens, effort);
   } else {
     body.max_tokens = maxTokens;
     body.temperature = 0;
@@ -168,10 +202,7 @@ export async function callVisionOnce(provider, apiKey, visionModel, systemPrompt
   const effort = normalizeReasoningEffort(opts.reasoningEffort);
   if (provider === 'gemini') {
     const imagePart = await imageUrlToGeminiPart(imageUrl, timeoutMs, signal, requestBudget);
-    const thinkingPads = { none: 128, minimal: 128, low: 256, medium: 512, high: 1024, xhigh: 2048, max: 2048 };
-    const generationConfig = { maxOutputTokens: maxTokens + (thinkingPads[effort] ?? 128) };
-    const thinkingConfig = geminiThinkingConfig(visionModel, effort);
-    if (thinkingConfig) generationConfig.thinkingConfig = thinkingConfig;
+    const generationConfig = createGeminiGenerationConfig(visionModel, effort, maxTokens);
     const body = {
       systemInstruction: { parts: [{ text: systemPrompt }] },
       contents: [{ role: 'user', parts: [{ text: textPrompt }, imagePart] }],
@@ -185,29 +216,24 @@ export async function callVisionOnce(provider, apiKey, visionModel, systemPrompt
     return getGeminiResponseText(data);
   }
 
-  const isOpenAIReasoning = provider === 'openai' && /^(?:gpt-[56](?:[.-]|$)|o[134](?:-|$))/i.test(visionModel.trim());
+  const usesOpenAIReasoning = provider === 'openai' && isOpenAIReasoningModel(visionModel);
   const body = {
     model: visionModel,
     messages: [
-      { role: isOpenAIReasoning ? 'developer' : 'system', content: systemPrompt },
+      { role: usesOpenAIReasoning ? 'developer' : 'system', content: systemPrompt },
       { role: 'user', content: [
         { type: 'text', text: textPrompt },
         { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } }
       ]}
     ]
   };
-  if (!isOpenAIReasoning) body.temperature = temperature;
-  if (provider === 'openrouter') {
-    body.provider = { sort: 'throughput' };
-    if (await openRouterModelSupportsReasoning(visionModel)) body.reasoning = { effort: openRouterReasoningEffort(effort) };
+  if (!usesOpenAIReasoning) body.temperature = temperature;
+  if (provider === 'openrouter') await addOpenRouterRouting(body, visionModel, effort);
+  if (usesOpenAIReasoning) {
+    addOpenAIReasoningConfig(body, visionModel, maxTokens, effort);
+  } else {
+    body.max_tokens = maxTokens;
   }
-  if (isOpenAIReasoning) {
-    const apiEffort = openAIReasoningEffort(effort, visionModel);
-    const reasoningPads = { none: 200, minimal: 200, low: 500, medium: 1200, high: 2500, xhigh: 4000, max: 12000 };
-    body.max_completion_tokens = maxTokens + (reasoningPads[apiEffort] ?? 500);
-    body.reasoning_effort = apiEffort;
-  }
-  else body.max_tokens = maxTokens;
 
   const data = await postJsonWithRetry(chatCompletionsUrl(provider), chatHeaders(apiKey), body, timeoutMs, `${providerLabel(provider)} vision`, provider, visionModel, { signal, requestBudget });
   return (data?.choices?.[0]?.message?.content || '').trim();
