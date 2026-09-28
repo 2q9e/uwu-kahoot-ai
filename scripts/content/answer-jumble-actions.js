@@ -18,60 +18,66 @@
     async function solveJumbleFromDOM(answerWord, options) {
       const myNonce = getSubmitNonce();
       const questionIndex = getCurrentQuestion()?.questionIndex;
-      const handledPromise = options.autoClick !== false
-        ? waitForQuestionEvent('uwukahootaiJumbleHandled', questionIndex, 3400, myNonce)
-        : null;
-      window.dispatchEvent(new CustomEvent('autoJumbleAnswer', {
-        detail: { answerWord, autoClick: options.autoClick !== false, questionIndex }
-      }));
-      if (getSubmitNonce() !== myNonce) return;
-
-      if (handledPromise && await handledPromise) {
+      const dispatchAfterDelay = async () => {
+        const handledPromise = options.autoClick !== false
+          ? waitForQuestionEvent('uwukahootaiJumbleHandled', questionIndex, 3400, myNonce)
+          : null;
+        window.dispatchEvent(new CustomEvent('autoJumbleAnswer', {
+          detail: { answerWord, autoClick: options.autoClick !== false, questionIndex }
+        }));
         if (getSubmitNonce() !== myNonce) return;
-        log('Jumble handled by page-bridge.js (React state)');
-        updateStatus('Answered ✅ (jumble)', answerWord);
-        return;
-      }
 
-      log('Injected.js did not handle jumble, trying DOM clicks');
+        if (handledPromise && await handledPromise) {
+          if (getSubmitNonce() !== myNonce) return;
+          log('Jumble handled by page-bridge.js (React state)');
+          updateStatus('Answered ✅ (jumble)', answerWord);
+          return;
+        }
 
-      const textEls = await questionDom.pollForJumbleTextEls(myNonce);
-      if (getSubmitNonce() !== myNonce) return;
-      if (textEls.length === 0) {
-        recordDiagnostic?.('JUMBLE_TILES_MISSING', { stage: 'matching' });
-        updateStatus('Jumble tiles not found', 'Wait for the tiles to load or reload the Kahoot tab.');
-        return;
-      }
+        log('Injected.js did not handle jumble, trying DOM clicks');
 
-      const labels = textEls.map(el => el.textContent?.trim() || '');
-      log(`Jumble tile labels read: ${labels.length}`);
-
-      const order = matching.computeTileOrder(answerWord, labels);
-      if (!order) {
-        recordDiagnostic?.('JUMBLE_ORDER_UNCLEAR', { stage: 'matching' });
-        updateStatus(`Can't map answer to tiles`, 'Check the visible tiles and retry.');
-        return;
-      }
-      log('Jumble tile order calculated.');
-
-      if (options.highlight !== false && !options.silentMode) answerFeedbackUi.showJumbleBadges(textEls, order);
-
-      if (options.autoClick === false) {
-        updateStatus('Jumble order shown', answerWord);
-        return;
-      }
-
-      const doClick = () => {
+        const textEls = await questionDom.pollForJumbleTextEls(myNonce);
         if (getSubmitNonce() !== myNonce) return;
-        clickJumbleTilesSequence(textEls, order, () => clickSubmitButton('jumble', 0, myNonce), 0, myNonce);
+        if (textEls.length === 0) {
+          recordDiagnostic?.('JUMBLE_TILES_MISSING', { stage: 'matching' });
+          updateStatus('Jumble tiles not found', 'Wait for the tiles to load or reload the Kahoot tab.');
+          return;
+        }
+
+        const labels = textEls.map(el => el.textContent?.trim() || '');
+        log(`Jumble tile labels read: ${labels.length}`);
+
+        const order = matching.computeTileOrder(answerWord, labels);
+        if (!order) {
+          recordDiagnostic?.('JUMBLE_ORDER_UNCLEAR', { stage: 'matching' });
+          updateStatus(`Can't map answer to tiles`, 'Check the visible tiles and retry.');
+          return;
+        }
+        log('Jumble tile order calculated.');
+
+        if (options.highlight !== false && !options.silentMode) answerFeedbackUi.showJumbleBadges(textEls, order);
+
+        if (options.autoClick === false) {
+          updateStatus('Jumble order shown', answerWord);
+          return;
+        }
+
+        const doClick = () => {
+          if (getSubmitNonce() !== myNonce) return;
+          clickJumbleTilesSequence(textEls, order, () => clickSubmitButton('jumble', 0, myNonce), 0, myNonce);
+        };
+        doClick();
       };
 
-      const delay = options.answerDelay ?? 0;
-      if (delay > 0) {
-        if (!options.silentMode) showTimerOverlay(delay, doClick);
-        else setTimeout(doClick, delay * 1000);
+      const delay = Number(options.answerDelay) || 0;
+      if (options.autoClick !== false && delay > 0) {
+        const dispatch = () => {
+          if (getSubmitNonce() === myNonce) void dispatchAfterDelay();
+        };
+        if (!options.silentMode) showTimerOverlay(delay, dispatch);
+        else setTimeout(dispatch, delay * 1000);
       } else {
-        doClick();
+        await dispatchAfterDelay();
       }
     }
 

@@ -54,15 +54,6 @@
       const myNonce = getSubmitNonce();
       const questionIndex = getCurrentQuestion()?.questionIndex;
 
-      const earlyInput = document.querySelector('input[data-functional-selector="slider-scale"]');
-      if (earlyInput && options.autoClick !== false) {
-        const rawMin = parseFloat(earlyInput.min), rawMax = parseFloat(earlyInput.max), rawStep = parseFloat(earlyInput.step);
-        const min = isNaN(rawMin) ? 0 : rawMin, max = isNaN(rawMax) ? 100 : rawMax, step = isNaN(rawStep) ? 1 : rawStep;
-        const snapped = Math.max(min, Math.min(max, min + Math.round((value - min) / step) * step));
-        window.dispatchEvent(new CustomEvent('sliderWSSend', { detail: { value: snapped, questionIndex } }));
-      log('Slider answer sent through WebSocket.');
-      }
-
       const rangeInputReady = await waitForDomResult(() => {
         const input = document.querySelector('input[data-functional-selector="slider-scale"]');
         return input && !document.querySelector('[data-functional-selector="loading-bar-progress"]') ? input : null;
@@ -107,7 +98,7 @@
         if (getSubmitNonce() !== myNonce) return;
 
         window.dispatchEvent(new CustomEvent('autoSliderAnswer', {
-          detail: { value, autoClick: true, skipWS: true, questionIndex }
+          detail: { value, autoClick: true, questionIndex }
         }));
         updateStatus('Answered ✅ (slider)', `🎚️ ${value} ${unit}`);
       };
