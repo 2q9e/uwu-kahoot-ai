@@ -26,6 +26,7 @@ const clearDiagnosticsBtn = document.getElementById('clearDiagnostics');
 const diagnosticsActionStatus = document.getElementById('diagnosticsActionStatus');
 const DIAGNOSTICS_STORAGE_KEY = 'uwuKahootDiagnosticsV1';
 let diagnosticEvents = [];
+let diagnosticsRevision = 0;
 
 function reportDiagnostic(code, metadata = {}) {
   try { chrome.runtime.sendMessage({ action: 'recordDiagnostic', code, metadata }).catch(() => {}); }
@@ -82,17 +83,21 @@ function renderDiagnostics() {
 }
 
 async function loadDiagnostics() {
+  const revision = diagnosticsRevision;
   try {
     const stored = await chrome.storage.local.get(DIAGNOSTICS_STORAGE_KEY);
+    if (revision !== diagnosticsRevision) return;
     diagnosticEvents = Array.isArray(stored[DIAGNOSTICS_STORAGE_KEY]) ? stored[DIAGNOSTICS_STORAGE_KEY] : [];
     renderDiagnostics();
   } catch (_) {
+    if (revision !== diagnosticsRevision) return;
     diagnosticsActionStatus.textContent = 'Debug history could not be loaded. Check extension storage and reload the extension.';
   }
 }
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName !== 'local' || !(DIAGNOSTICS_STORAGE_KEY in changes)) return;
+  diagnosticsRevision += 1;
   diagnosticEvents = Array.isArray(changes[DIAGNOSTICS_STORAGE_KEY].newValue)
     ? changes[DIAGNOSTICS_STORAGE_KEY].newValue
     : [];
