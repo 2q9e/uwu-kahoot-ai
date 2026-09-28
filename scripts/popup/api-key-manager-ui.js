@@ -1,8 +1,5 @@
-import {
-  getProviderApiKeyEntries,
-  updateProviderApiKey
-} from '../core/storage.js';
-import { validateProviderApiKey } from '../core/api-key-validation.js';
+import { getProviderApiKeyEntries } from '../core/storage.js';
+import { testProviderApiKeyRecord } from './api-key-testing.js';
 import {
   createLocalConfigKeyCard,
   createProviderKeyCard
@@ -135,12 +132,7 @@ export function createApiKeyManager({
         const record = records[index];
         testEnabledKeysButton.textContent = 'Testing ' + (index + 1) + '/' + records.length + '…';
         setAiFeedback('Checking ' + record.label + ' (' + (index + 1) + ' of ' + records.length + '). No generation request is sent.');
-        const result = await validateProviderApiKey(provider, record.secret);
-        try {
-          await updateProviderApiKey(provider, record.id, {
-            lastTest: { at: Date.now(), ok: result.ok, status: result.status, message: result.message }
-          });
-        } catch (_) {}
+        const { result } = await testProviderApiKeyRecord(provider, record);
         if (result.ok) passed += 1;
       }
 

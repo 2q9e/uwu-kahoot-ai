@@ -4,7 +4,7 @@ import {
   updateProviderApiKey
 } from '../core/storage.js';
 import { maskApiKey } from '../core/api-key-manager.js';
-import { validateProviderApiKey } from '../core/api-key-validation.js';
+import { testProviderApiKeyRecord } from './api-key-testing.js';
 
 function managerButton(text, className = 'catalog-action secondary') {
   const button = document.createElement('button');
@@ -156,10 +156,8 @@ export function createProviderKeyCard({
     test.textContent = 'Testing…';
     setAiFeedback('Testing ' + record.label + '. No generation request is sent.');
     try {
-      const result = await validateProviderApiKey(provider, record.secret);
-      await updateProviderApiKey(provider, record.id, {
-        lastTest: { at: Date.now(), ok: result.ok, status: result.status, message: result.message }
-      });
+      const { result, persistenceError } = await testProviderApiKeyRecord(provider, record);
+      if (persistenceError) throw persistenceError;
       setAiFeedback(record.label + ': ' + result.message, result.ok ? 'success' : 'error');
     } catch (error) {
       setAiFeedback(error.message || 'Could not test ' + record.label + '.', 'error');
