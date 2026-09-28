@@ -98,9 +98,11 @@ export function createProviderModelCatalog({
 
   async function restoreProviderCatalog(provider, isCurrentLoad = () => provider === getCurrentProvider(), preserveDraft = false) {
     if (!isCurrentLoad()) return;
-    if (providerCatalogs[provider]) {
-      populateBackupSlots(providerCatalogs[provider], currentBackupSelection(), modelInput?.value || '');
+    const sessionModels = providerCatalogs[provider];
+    if (Array.isArray(sessionModels) && sessionModels.length > 0) {
+      populateBackupSlots(sessionModels, currentBackupSelection(), modelInput?.value || '');
       renderModelCatalog();
+      setCatalogStatus(`${sessionModels.length.toLocaleString()} models loaded in this session. Refresh for the current list.`, 'muted');
       return;
     }
     try {
