@@ -104,7 +104,10 @@ export function createModelCatalogSpeedActions({
   }
 
   async function measureOpenAISpeed(model, button) {
+    const isCurrentProvider = () => getCurrentProvider() === 'openai';
+    if (!isCurrentProvider()) return;
     const key = await getCurrentProviderKey('openai');
+    if (!isCurrentProvider()) return;
     if (!key) {
       setAiFeedback('Enter or save an OpenAI key before measuring speed.', 'error');
       return;
@@ -148,13 +151,17 @@ export function createModelCatalogSpeedActions({
       try {
         await chrome.storage.local.set({ [OPENAI_SPEED_STORAGE_KEY]: Object.fromEntries(recentSpeeds) });
       } catch (_) {  }
-      setAiFeedback(`${model.name}: median streamed TPS ${result.tokensPerSecond} visible text tok/s across ${result.sampleCount} runs · median first token ${result.firstTokenMs} ms. OpenAI usage charges may apply.`, 'success');
-      renderModelCatalog();
+      if (isCurrentProvider()) {
+        setAiFeedback(`${model.name}: median streamed TPS ${result.tokensPerSecond} visible text tok/s across ${result.sampleCount} runs · median first token ${result.firstTokenMs} ms. OpenAI usage charges may apply.`, 'success');
+        renderModelCatalog();
+      }
     } catch (error) {
-      setAiFeedback(error.message || 'OpenAI speed check failed.', 'error');
+      if (isCurrentProvider()) setAiFeedback(error.message || 'OpenAI speed check failed.', 'error');
     } finally {
-      button.disabled = false;
-      button.textContent = 'Measure speed';
+      if (button.isConnected) {
+        button.disabled = false;
+        button.textContent = 'Measure speed';
+      }
     }
   }
 
