@@ -118,7 +118,7 @@ export function createLiveSessionTabs({
     renderTabs();
   }
 
-  async function refreshTabs({ preferActive = false, probeIds = [] } = {}) {
+  async function refreshTabs({ preferActive = false, probeIds = [], pollSelected = false } = {}) {
     const token = ++tabRefreshToken;
     let tabs;
     try {
@@ -172,6 +172,9 @@ export function createLiveSessionTabs({
       clearSelectedQuestion();
       setLiveStatus('ready', 'Checking selected tab…', 'Reading the selected Kahoot tab.');
       await pollCurrentQuestion(selectedKahootTabId);
+    } else if (pollSelected && selectedKahootTabId) {
+      setLiveStatus('ready', 'Checking selected tab…', 'Reading the selected Kahoot tab.');
+      await pollCurrentQuestion(selectedKahootTabId);
     }
   }
 
@@ -184,7 +187,7 @@ export function createLiveSessionTabs({
         selectionLocked = true;
       }
     } catch (_) {}
-    await refreshTabs({ preferActive: !selectionLocked });
+    await refreshTabs({ preferActive: !selectionLocked, pollSelected: true });
   }
 
   kahootTabSelect?.addEventListener('change', () => {
