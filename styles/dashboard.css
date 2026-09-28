@@ -59,6 +59,7 @@ a { color: inherit; }
 .dashboard-brand small { display: block; margin-top: 3px; color: #718079; font-size: 8px; font-weight: 800; letter-spacing: 1.5px; }
 .view-control { display: flex; align-items: center; gap: 5px; padding: 4px; border: 1px solid rgba(255,255,255,.085); border-radius: 11px; background: rgba(255,255,255,.035); }
 .view-label { padding: 0 7px 0 5px; color: #829089; font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
+.mode-save-status { max-width: 190px; color: #e9a5d3; font-size: 10px; line-height: 1.35; }
 .view-button { display: inline-flex; align-items: center; min-height: 30px; padding: 0 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #b9a9c2; font: 600 11px system-ui, sans-serif; text-decoration: none; cursor: pointer; transition: transform .2s var(--motion-ease), background .2s var(--motion-ease), color .2s var(--motion-ease), border-color .2s var(--motion-ease), box-shadow .2s var(--motion-ease); }
 .view-button[aria-pressed="true"] { border-color: rgba(240,171,252,.23); background: rgba(192,38,211,.13); color: #fae8ff; }
 .view-button:hover { color: #fff3ff; }

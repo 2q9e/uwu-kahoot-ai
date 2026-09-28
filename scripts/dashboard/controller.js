@@ -2,6 +2,7 @@ import { computeSceneProgress, computeSceneScrollRange, supportsNativeScrollTime
 
 const modeButtons = [...document.querySelectorAll('[data-mode]')];
 const dashboardFrame = document.getElementById('dashboardApp');
+const modeSaveStatus = document.getElementById('modeSaveStatus');
 const dashboardTopbar = document.querySelector('.dashboard-topbar');
 const heroStage = document.querySelector('.hero-stage');
 const stageOrb = document.querySelector('.stage-orb');
@@ -15,6 +16,8 @@ const backCard = document.querySelector('.card-back');
 const stageGrid = document.querySelector('.stage-grid');
 const scrollProgress = document.querySelector('.scroll-progress span');
 let userSelectedMode = false;
+let modePreferenceRevision = 0;
+let modePreferenceWriteQueue = Promise.resolve();
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const hasScrollTimeline = supportsNativeScrollTimeline(globalThis.CSS);
 let heroBounds = null;
@@ -274,14 +277,29 @@ async function loadMode() {
   }
 }
 
+function persistMode(mode, revision) {
+  const write = modePreferenceWriteQueue.catch(() => {}).then(async () => {
+    if (revision !== modePreferenceRevision) return;
+    await chrome.storage.local.set({ dashboardMode: mode });
+  });
+  modePreferenceWriteQueue = write;
+  return write;
+}
+
 for (const button of modeButtons) {
   button.addEventListener('click', async () => {
     userSelectedMode = true;
+    const revision = ++modePreferenceRevision;
     const mode = button.dataset.mode;
     applyMode(mode);
+    if (modeSaveStatus) modeSaveStatus.textContent = '';
     try {
-      await chrome.storage.local.set({ dashboardMode: mode });
+      await persistMode(mode, revision);
+      if (revision === modePreferenceRevision && modeSaveStatus) modeSaveStatus.textContent = '';
     } catch (_) {
+      if (revision === modePreferenceRevision && modeSaveStatus) {
+        modeSaveStatus.textContent = 'View changed for this session; could not save your preference.';
+      }
     }
   });
 }
