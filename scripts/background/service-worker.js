@@ -1,9 +1,7 @@
-
 import { DEFAULT_MODEL, DEFAULT_VISION_MODEL, DEPRECATED_MODELS } from '../core/constants.js';
 import { recordProviderUsageInBackground } from '../core/provider-usage.js';
-import { AI_REQUEST_BUDGET_MS } from '../ai/provider-client.js';
-import { answerJumbleQuestion, answerMultiSelect, answerOpenEndedQuestion, answerPinQuestion, answerQuestion, answerSliderQuestion } from '../ai/answer-questions.js';
 import { classifyAiFailure, createDiagnosticRecord, diagnosticPresentation, DIAGNOSTICS_STORAGE_KEY } from './diagnostics.js';
+import { createQuestionProcessor } from './question-processor.js';
 
 const TAG = '[UwU Kahoot AI]';
 const STYLE = 'color:#c026d3;font-weight:bold';
@@ -125,6 +123,44 @@ function isKahootTab(url) {
   }
 }
 
+function getRequestScope(tabId, frameId) {
+  return `${Number.isInteger(tabId) ? tabId : 'unknown'}:${Number.isInteger(frameId) ? frameId : 0}`;
+}
+
+function sendToTab(tabId, frameId, action, data = {}) {
+  const options = Number.isInteger(frameId) && frameId >= 0 ? { frameId } : undefined;
+  try {
+    chrome.tabs.sendMessage(tabId, { action, ...data }, options).catch(() => {
+      void recordDiagnostic('CONTENT_SCRIPT_DISCONNECTED', { stage: action === 'answerProgress' ? 'provider' : 'dispatch' });
+    });
+  } catch (_) {
+    void recordDiagnostic('CONTENT_SCRIPT_DISCONNECTED', { stage: 'dispatch' });
+  }
+}
+
+function sendToTabAsync(tabId, frameId, action, data = {}) {
+  const options = Number.isInteger(frameId) && frameId >= 0 ? { frameId } : undefined;
+  return new Promise(resolve => {
+    chrome.tabs.sendMessage(tabId, { action, ...data }, options, response => {
+      if (chrome.runtime.lastError) {
+        void recordDiagnostic('CONTENT_SCRIPT_DISCONNECTED', { stage: action === 'getQuestionImageUrl' || action === 'getPinImageUrl' ? 'image' : 'dispatch' });
+        resolve(null);
+        return;
+      }
+      resolve(response);
+    });
+  });
+}
+
+const handleQuestion = createQuestionProcessor({
+  recordGeneratedAnswer,
+  recordDiagnostic,
+  sendToTab,
+  sendToTabAsync,
+  log,
+  err
+});
+
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.action === 'recordProviderUsage') {
     recordProviderUsageInBackground(msg.provider, msg.model, msg.status, msg.usage || {})
@@ -177,206 +213,3 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 });
-
-function getRequestScope(tabId, frameId) {
-  return `${Number.isInteger(tabId) ? tabId : 'unknown'}:${Number.isInteger(frameId) ? frameId : 0}`;
-}
-
-async function getQuestionImage(question, tabId, frameId, requestId) {
-  if (question.imageUrl) return question.imageUrl;
-  const response = await sendToTabAsync(tabId, frameId, 'getQuestionImageUrl', { requestId });
-  if (response?.stale) throw new Error('Question changed before the image could be read.');
-  return response?.imageUrl || null;
-}
-
-async function handleQuestion(question, tabId, frameId, requestId, solveId, signal) {
-  if (!question?.title || !tabId) return;
-  const t0 = performance.now();
-  const ms = () => `${Math.round(performance.now() - t0)}ms`;
-  let stage = 'settings';
-  let activeProvider = null;
-  let activeModel = null;
-  let activeAttempt = null;
-  let activeHttpStatus = null;
-  const answerOptions = {
-    signal,
-    deadline: Date.now() + AI_REQUEST_BUDGET_MS,
-    onProgress: progress => {
-      stage = 'provider';
-      activeProvider = progress.provider || activeProvider;
-      activeModel = progress.model || activeModel;
-      activeAttempt = progress.attempt || activeAttempt;
-      if (progress.event === 'attempt') activeHttpStatus = null;
-      if (progress.event === 'failed') activeHttpStatus = progress.httpStatus || null;
-      sendToTab(tabId, frameId, 'answerProgress', { ...progress, requestId });
-    }
-  };
-
-  log(`Question received | Type: ${question.type || 'unknown'} | Choices: ${(question.choices || []).length}`);
-
-  try {
-    const settings = await chrome.storage.sync.get([
-      'highlightOption',
-      'autoClickOption',
-      'pinHighlightOption',
-      'pinAutoClickOption',
-      'answerDelay',
-      'silentMode'
-    ]);
-
-    const opts = {
-      highlight: settings.highlightOption !== false,
-      autoClick: settings.autoClickOption !== false,
-      answerDelay: settings.answerDelay ?? 0,
-      silentMode: !!settings.silentMode
-    };
-
-    if (question.type === 'pin_it') {
-      opts.highlight = settings.pinHighlightOption !== false;
-      opts.autoClick = !!settings.pinAutoClickOption;
-    }
-
-    switch (question.type) {
-      case 'pin_it': {
-        let imageUrl = question.imageUrl;
-        let imageSource = imageUrl ? 'websocket' : null;
-        if (!imageUrl) {
-          stage = 'image';
-          const response = await sendToTabAsync(tabId, frameId, 'getPinImageUrl', { requestId });
-          if (response?.stale) throw new Error('Question changed before the image could be read.');
-          imageUrl = response?.imageUrl;
-          imageSource = imageUrl ? 'dom' : null;
-        }
-        if (!imageUrl) throw new Error('No image found for pin question');
-        log(`Pin image found (${imageSource})`);
-        stage = 'provider';
-        const aiStartedAt = performance.now();
-        const coords = await answerPinQuestion(question.title, imageUrl, answerOptions);
-        if (signal?.aborted) return;
-        const responseMs = Math.round(performance.now() - aiStartedAt);
-        log(`Pin answer ready (${ms()})`);
-        const statsWrite = recordGeneratedAnswer(solveId, question, `${coords.x}, ${coords.y}`, responseMs, signal);
-        stage = 'dispatch';
-        sendToTab(tabId, frameId, 'placePin', { coords, options: opts, elapsed: ms(), requestId });
-        await statsWrite;
-        break;
-      }
-
-      case 'jumble': {
-        stage = 'provider';
-        const aiStartedAt = performance.now();
-        const answerWord = await answerJumbleQuestion(question.title, question.choices, answerOptions);
-        if (signal?.aborted) return;
-        const responseMs = Math.round(performance.now() - aiStartedAt);
-        log(`Jumble answer ready (${ms()})`);
-        const statsWrite = recordGeneratedAnswer(solveId, question, answerWord, responseMs, signal);
-        stage = 'dispatch';
-        sendToTab(tabId, frameId, 'reorderJumble', { answerWord, options: opts, elapsed: ms(), requestId });
-        await statsWrite;
-        break;
-      }
-
-      case 'slider': {
-        stage = 'image';
-        const imageUrl = await getQuestionImage(question, tabId, frameId, requestId);
-        stage = 'provider';
-        const aiStartedAt = performance.now();
-        const value = await answerSliderQuestion(question.title, question.sliderConfig || {}, imageUrl, answerOptions);
-        if (signal?.aborted) return;
-        const responseMs = Math.round(performance.now() - aiStartedAt);
-        log(`Slider answer ready (${ms()})`);
-        const statsWrite = recordGeneratedAnswer(solveId, question, value, responseMs, signal);
-        stage = 'dispatch';
-        sendToTab(tabId, frameId, 'setSlider', { value, options: opts, elapsed: ms(), requestId });
-        await statsWrite;
-        break;
-      }
-
-      case 'open_ended': {
-        stage = 'image';
-        const imageUrl = await getQuestionImage(question, tabId, frameId, requestId);
-        stage = 'provider';
-        const aiStartedAt = performance.now();
-        const answer = await answerOpenEndedQuestion(question.title, imageUrl, answerOptions);
-        if (signal?.aborted) return;
-        const responseMs = Math.round(performance.now() - aiStartedAt);
-        log(`Open-ended answer ready (${ms()})`);
-        const statsWrite = recordGeneratedAnswer(solveId, question, answer, responseMs, signal);
-        stage = 'dispatch';
-        sendToTab(tabId, frameId, 'typeOpenEnded', { answer, options: opts, elapsed: ms(), requestId });
-        await statsWrite;
-        break;
-      }
-
-      default: {
-        stage = 'image';
-        const imageUrl = await getQuestionImage(question, tabId, frameId, requestId);
-        const isMultiSelect = question.type === 'multiple_select_quiz';
-        let answers;
-        stage = 'provider';
-        const aiStartedAt = performance.now();
-        if (isMultiSelect) {
-          answers = await answerMultiSelect(question.title, question.choices, imageUrl, answerOptions);
-        } else {
-          const answer = await answerQuestion(question.title, question.choices, imageUrl, answerOptions);
-          answers = [answer];
-        }
-        if (signal?.aborted) return;
-        const responseMs = Math.round(performance.now() - aiStartedAt);
-        log(`Answer ready | Choices: ${answers.length} (${ms()})`);
-        const statsWrite = recordGeneratedAnswer(solveId, question, answers.join(' · '), responseMs, signal);
-        stage = 'dispatch';
-        sendToTab(tabId, frameId, 'highlightAnswer', { answers, isMultiSelect, options: opts, elapsed: ms(), requestId });
-        await statsWrite;
-      }
-    }
-  } catch (error) {
-    if (signal?.aborted || error?.name === 'AbortError') {
-      log(`Question request cancelled (${ms()})`);
-      return;
-    }
-    const code = classifyAiFailure(error, stage);
-    const diagnostic = diagnosticPresentation(code);
-    const metadata = {
-      stage,
-      provider: activeProvider,
-      model: activeModel,
-      httpStatus: error?.status || activeHttpStatus,
-      errorName: error?.name,
-      attempt: activeAttempt
-    };
-    err(`Question processing failed (${ms()})`, code, error?.status ? `HTTP ${error.status}` : '');
-    await recordDiagnostic(code, metadata);
-    sendToTab(tabId, frameId, 'showError', {
-      message: diagnostic.title,
-      suggestion: diagnostic.recovery,
-      diagnosticCode: diagnostic.code,
-      requestId
-    });
-  }
-}
-
-function sendToTab(tabId, frameId, action, data = {}) {
-  const options = Number.isInteger(frameId) && frameId >= 0 ? { frameId } : undefined;
-  try {
-    chrome.tabs.sendMessage(tabId, { action, ...data }, options).catch(() => {
-      void recordDiagnostic('CONTENT_SCRIPT_DISCONNECTED', { stage: action === 'answerProgress' ? 'provider' : 'dispatch' });
-    });
-  } catch (_) {
-    void recordDiagnostic('CONTENT_SCRIPT_DISCONNECTED', { stage: 'dispatch' });
-  }
-}
-
-function sendToTabAsync(tabId, frameId, action, data = {}) {
-  const options = Number.isInteger(frameId) && frameId >= 0 ? { frameId } : undefined;
-  return new Promise(resolve => {
-    chrome.tabs.sendMessage(tabId, { action, ...data }, options, response => {
-      if (chrome.runtime.lastError) {
-        void recordDiagnostic('CONTENT_SCRIPT_DISCONNECTED', { stage: action === 'getQuestionImageUrl' || action === 'getPinImageUrl' ? 'image' : 'dispatch' });
-        resolve(null);
-        return;
-      }
-      resolve(response);
-    });
-  });
-}
