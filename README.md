@@ -19,7 +19,7 @@
 
 UwU Kahoot AI reads question data from the selected Kahoot player tab and sends it to the provider you configure. Answers come back to the extension, which can highlight a suggestion or use the answer controls you enable.
 
-This project began from KahootAI as a base and has since been substantially reworked, including broader provider support, multi-key management, model selection, fallback routing, and improvements to question and tab handling.
+UwU Kahoot AI is a heavily modified derivative of [kAIhoot](https://github.com/Gavri-dev/kAIhoot), built by [@Gavri-dev](https://github.com/Gavri-dev). kAIhoot credits [QuizGPT](https://github.com/im23b-busere/QuizGPT), by [@im23b-busere](https://github.com/im23b-busere), as its original base. This version adds broader provider support, multi-key management, model selection, fallback routing, and changes to question handling and the user interface. See [LICENSE](LICENSE) for the retained license notices.
 
 The game host must have **Show questions & answers on players' devices** enabled for the player page to receive question text. When that setting is off, the extension cannot recover the hidden question from the player tab.
 
