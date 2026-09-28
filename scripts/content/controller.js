@@ -16,6 +16,11 @@ const STYLE = 'color:#c026d3;font-weight:bold';
 const log = (...args) => console.log(`%c${TAG}`, STYLE, ...args);
 const warn = (...args) => console.warn(`%c${TAG}`, STYLE, ...args);
 
+function recordDiagnostic(code, metadata = {}) {
+  try { chrome.runtime.sendMessage({ action: 'recordDiagnostic', code, metadata }).catch(() => {}); }
+  catch (_) {}
+}
+
 let currentQuestion = null;
 let currentSolveId = null;
 let currentAnswer = null;
@@ -34,6 +39,11 @@ const QUESTION_SCOPED_ACTIONS = new Set([
   'getPinImageUrl', 'getQuestionImageUrl'
 ]);
 const CHOICE_QUESTION_TYPES = new Set(['quiz', 'true_false', 'multiple_select_quiz']);
+const NON_RETRYABLE_DIAGNOSTICS = new Set([
+  'AI_KEY_MISSING', 'AI_KEY_REJECTED', 'AI_ACCESS_DENIED', 'AI_BILLING_LIMIT',
+  'AI_RATE_LIMIT', 'AI_MODEL_UNAVAILABLE', 'AI_REQUEST_INVALID', 'AI_IMAGE_UNSUPPORTED', 'AI_ANSWER_UNCLEAR',
+  'EXTENSION_STORAGE_ERROR'
+]);
 
 let cachedSettings = {
   highlightOption: true,
@@ -77,6 +87,7 @@ const answerActions = globalThis.UwUKahootAIAnswerActions.create({
   answerFeedbackUi,
   showTimerOverlay,
   updateStatus,
+  recordDiagnostic,
   log,
   warn,
   getSubmitNonce: () => submitNonce,
@@ -109,6 +120,7 @@ function refreshSettings() {
     chrome.storage.sync.get(
       ['highlightOption', 'autoClickOption', 'pinHighlightOption', 'pinAutoClickOption', 'answerDelay', 'silentMode'],
       s => {
+        if (chrome.runtime.lastError) recordDiagnostic('EXTENSION_STORAGE_ERROR', { stage: 'settings' });
         const values = settingsRevision === revisionAtRead ? (s || {}) : { ...(s || {}), ...latestSettingsChanges };
         cachedSettings = {
           highlightOption: values.highlightOption !== false,
@@ -143,6 +155,9 @@ chrome.storage.onChanged.addListener((changes, ns) => {
 });
 
 initialSettingsPromise = refreshSettings().then(() => { initialSettingsLoaded = true; });
+
+window.addEventListener('error', event => recordDiagnostic('CONTENT_SCRIPT_UNHANDLED_ERROR', { stage: 'content', errorName: event.error?.name }));
+window.addEventListener('unhandledrejection', event => recordDiagnostic('CONTENT_SCRIPT_UNHANDLED_ERROR', { stage: 'content', errorName: event.reason?.name }));
 
 function questionHash(q) {
   return JSON.stringify({
@@ -209,11 +224,15 @@ function sendQuestionToBackend(question) {
   });
   chrome.runtime.sendMessage({ action: 'processQuestion', question, requestId: lastSentHash, solveId: currentSolveId }, response => {
     if (chrome.runtime.lastError) {
-      updateStatus('Error: ' + chrome.runtime.lastError.message);
+      recordDiagnostic('BACKGROUND_WORKER_UNAVAILABLE', { stage: 'content' });
+      updateStatus('Error: extension background did not respond', 'Reload the extension, then reload the Kahoot tab.');
       lastSentHash = null; lastPreparedHash = null;
       return;
     }
-    if (response?.error) updateStatus('Error', response.error);
+    if (response?.error) {
+      recordDiagnostic(response.diagnosticCode || 'UNCLASSIFIED_ERROR', { stage: 'background' });
+      updateStatus(`Error: ${response.error}`, response.suggestion || 'Open Debug details for recovery guidance.');
+    }
   });
   return true;
 }
@@ -268,6 +287,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
         const validAnswerSet = matching.validateAnswerSet(currentChoices, answersFromAI, !!request.isMultiSelect);
         if (!validAnswerSet) {
           warn('A stale or ambiguous answer was rejected.');
+          recordDiagnostic('ANSWER_NO_MATCH', { stage: 'matching' });
           updateStatus('Error: answer did not match current choices', 'Try again or check the provider response.');
           lastSentHash = null;
           sendResponse({ success: false });
@@ -294,12 +314,13 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
     case 'showError':
       {
-        const message = typeof request.message === 'string' ? request.message.slice(0, 240) : 'Unknown error';
-        updateStatus('Error ❌', message);
-        broadcastToPopup('updateStatus', { status: 'Could not answer', detail: message, state: 'error' });
-        showErrorToast(message);
+        const message = typeof request.message === 'string' ? request.message.slice(0, 160) : 'Question processing failed';
+        const suggestion = typeof request.suggestion === 'string' ? request.suggestion.slice(0, 240) : 'Open Debug details for recovery guidance.';
+        updateStatus(`Error ❌ · ${message}`, suggestion);
+        broadcastToPopup('updateStatus', { status: `Could not answer · ${message}`, detail: suggestion, state: 'error' });
+        showErrorToast(`${message}. ${suggestion}`);
         sendResponse({ success: true });
-        if (currentQuestion && !hasRetried && !message.includes('API key')) {
+        if (currentQuestion && !hasRetried && !NON_RETRYABLE_DIAGNOSTICS.has(request.diagnosticCode)) {
           hasRetried = true;
           pendingRetryHash = questionHash(currentQuestion);
           lastSentHash = pendingRetryHash;
@@ -396,12 +417,19 @@ window.addEventListener('kahootGameReset', () => {
   removeStatusIndicator();
 });
 
+window.addEventListener('kahootQuestionDataIssue', event => {
+  const code = event.detail?.code === 'QUESTION_TITLE_MISSING' ? 'QUESTION_TITLE_MISSING' : 'QUESTION_DATA_UNREADABLE';
+  recordDiagnostic(code, { stage: 'detection' });
+  updateStatus(code === 'QUESTION_TITLE_MISSING' ? 'Question text not detected' : 'Kahoot question data unreadable', 'Wait for the question to finish loading, then reload the Kahoot tab if it repeats.');
+});
+
 window.addEventListener('kahootAnswerDispatchResult', event => {
   const detail = event.detail || {};
   if (!currentQuestion || String(detail.questionIndex) !== String(currentQuestion.questionIndex)) return;
   if (detail.sent) {
     updateStatus('Answer sent over Kahoot connection', 'WebSocket send succeeded; Kahoot acceptance is not confirmed.', { stage: 'sent' });
   } else {
+    recordDiagnostic('KAHOOT_WS_NOT_READY', { stage: 'kahoot' });
     updateStatus('Kahoot connection is not ready', 'The answer remains highlighted on the page. Reconnect, then try again.', { stage: 'send_failed' });
   }
 });
@@ -566,6 +594,12 @@ window.addEventListener('kahootQuestionParsed', async (event) => {
         visibleChoiceCount: domChoices.length,
         choicesReady: false
       };
+      recordDiagnostic('QUESTION_CHOICES_INCOMPLETE', {
+        stage: 'detection',
+        dataChoiceCount,
+        visibleChoiceCount: domChoices.length,
+        expectedChoiceCount: requiredChoices
+      });
       broadcastToPopup('updateQuestion', {
         question: { title: q.title, type: q.type, choices: currentQuestion.choices },
         state: 'waiting_for_choices',

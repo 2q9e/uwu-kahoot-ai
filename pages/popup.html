@@ -77,6 +77,17 @@
       <p id="liveDetail" class="live-detail">Open a Kahoot game to see activity here.</p>
       <div id="questionReadiness" class="question-readiness hidden" role="status" aria-live="polite"></div>
       <div id="answerHandoff" class="answer-handoff hidden" role="status" aria-live="polite"></div>
+      <details id="diagnosticsPanel" class="diagnostics-panel">
+        <summary><span>Debug details</span><span id="diagnosticsCount" class="diagnostics-count">0 events</span></summary>
+        <div class="diagnostics-tools">
+          <p>Recent failures and recovery steps. Reports omit quiz text, answers, email addresses, and API keys.</p>
+          <div><button id="selectDiagnosticReport" class="btn-diagnostic" type="button" disabled>Select report to copy</button><button id="clearDiagnostics" class="btn-diagnostic" type="button" disabled>Clear history</button></div>
+        </div>
+        <ol id="diagnosticsList" class="diagnostics-list"></ol>
+        <p id="diagnosticsEmpty" class="diagnostics-empty">No diagnostic events recorded.</p>
+        <textarea id="diagnosticReport" class="diagnostic-report hidden" readonly aria-label="Sanitized diagnostic report"></textarea>
+        <p id="diagnosticsActionStatus" class="diagnostics-action-status" role="status" aria-live="polite"></p>
+      </details>
       <div id="liveEmpty" class="live-empty">No question detected yet.</div>
       <div id="liveQuestion" class="live-question hidden">
       <div class="live-row">

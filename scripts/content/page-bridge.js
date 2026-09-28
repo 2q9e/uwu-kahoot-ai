@@ -84,7 +84,12 @@
   function parseQuestionContent(raw) {
     try {
       const content = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      if (!content.title && !content.question) return;
+      if (!content.title && !content.question) {
+        if (ANSWERABLE_TYPES.has(content.type)) {
+          window.dispatchEvent(new CustomEvent('kahootQuestionDataIssue', { detail: { code: 'QUESTION_TITLE_MISSING' } }));
+        }
+        return;
+      }
 
       if (NON_SCORED_TYPES.has(content.type)) {
         window.dispatchEvent(new CustomEvent('kahootNonScoredQuestion', { detail: { type: content.type } }));
@@ -143,7 +148,10 @@
       const imageUrl = content.image || content.media?.image || content.media?.url || null;
       if (isPin) log(`Pin image ${imageUrl ? 'found' : 'not in WebSocket data'}`);
       const title = content.title || (typeof content.question === 'string' ? content.question : content.question?.text || content.question?.title);
-      if (!title) return;
+      if (!title) {
+        window.dispatchEvent(new CustomEvent('kahootQuestionDataIssue', { detail: { code: 'QUESTION_TITLE_MISSING' } }));
+        return;
+      }
 
       const question = {
         title: decodeEntities(title),
@@ -156,7 +164,14 @@
 
       window.kahootQuestionIndex = question.questionIndex;
       window.dispatchEvent(new CustomEvent('kahootQuestionParsed', { detail: question }));
-    } catch (e) { console.debug(TAG, 'Question parse error:', e.message); }
+    } catch (_) {
+      const expectedQuestion = (raw && typeof raw === 'object' && ANSWERABLE_TYPES.has(raw.type)) ||
+        (typeof raw === 'string' && /"type"\s*:\s*"(?:quiz|true_false|multiple_select_quiz|pin_it|jumble|slider|open_ended)"/.test(raw));
+      if (expectedQuestion) {
+        window.dispatchEvent(new CustomEvent('kahootQuestionDataIssue', { detail: { code: 'QUESTION_DATA_UNREADABLE' } }));
+      }
+      console.debug(TAG, 'Question parse error.');
+    }
   }
 
   window.WebSocket = function (url, protocols) {
@@ -372,14 +387,16 @@
   }
 
   window.sendAutoClickMessage = function (choice) {
-    const sent = wsSend(makePayload({ type: 'quiz', choice, questionIndex: window.kahootQuestionIndex }));
+    let sent = false;
+    try { sent = wsSend(makePayload({ type: 'quiz', choice, questionIndex: window.kahootQuestionIndex })); } catch (_) {}
     window.dispatchEvent(new CustomEvent('kahootAnswerDispatchResult', {
       detail: { sent, questionIndex: window.kahootQuestionIndex }
     }));
   };
 
   window.sendMultiSelectMessage = function (choices) {
-    const sent = wsSend(makePayload({ type: 'multiple_select_quiz', choice: choices, questionIndex: window.kahootQuestionIndex }));
+    let sent = false;
+    try { sent = wsSend(makePayload({ type: 'multiple_select_quiz', choice: choices, questionIndex: window.kahootQuestionIndex })); } catch (_) {}
     window.dispatchEvent(new CustomEvent('kahootAnswerDispatchResult', {
       detail: { sent, questionIndex: window.kahootQuestionIndex }
     }));

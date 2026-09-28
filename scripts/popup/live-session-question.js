@@ -11,6 +11,7 @@ export function createLiveSessionQuestion({
   liveDetail,
   questionReadiness,
   answerHandoff,
+  recordDiagnostic,
   liveEmpty,
   liveQuestion,
   questionText,
@@ -161,6 +162,7 @@ export function createLiveSessionQuestion({
       }
       return pollCurrentQuestion(tabSession, tabSession.getSelectedTabId());
     }
+    let failureCode = 'KAHOOT_TAB_UNAVAILABLE';
     try {
       let connected = false;
       try {
@@ -175,6 +177,7 @@ export function createLiveSessionQuestion({
       if (tabSession.getSelectedTabId() !== targetTabId) return;
       if (tabSession.getTabs().find(candidate => candidate.id === targetTabId)?.url !== tab.url) return;
       if (!connected) {
+        failureCode = 'CONTENT_SCRIPT_DISCONNECTED';
         tabSession.setConnection(tab.id, { url: tab.url, state: 'reload' });
         tabSession.renderTabs();
         throw new Error('Kahoot content script is not connected.');
@@ -185,7 +188,10 @@ export function createLiveSessionQuestion({
       let response = null;
       try {
         response = await tabsApi.sendMessage(tab.id, { action: 'getQuestion' });
-      } catch (_) {}
+      } catch (_) {
+        failureCode = 'CONTENT_SCRIPT_DISCONNECTED';
+        throw new Error('The selected tab stopped responding.');
+      }
       if (tabSession.getSelectedTabId() !== targetTabId) return;
       if (tabSession.getTabs().find(candidate => candidate.id === targetTabId)?.url !== tab.url) return;
       if (response?.question) {
@@ -201,6 +207,9 @@ export function createLiveSessionQuestion({
       }
     } catch (_) {
       if (tabSession.getSelectedTabId() !== targetTabId) return;
+      recordDiagnostic?.(failureCode, { stage: 'popup' });
+      tabSession.setConnection(tab.id, { url: tab.url, state: 'reload' });
+      tabSession.renderTabs();
       clearSelectedQuestion();
       setLiveStatus('error', 'Reload the Kahoot tab', 'Use Reload above to connect this selected page to the extension.');
     }
@@ -245,6 +254,7 @@ export function createLiveSessionQuestion({
       const result = await tabsApi.sendMessage(tab.id, { action: 'manualAnswer' });
       if (!result?.success) throw new Error(result?.message || 'Could not retry this question.');
     } catch (error) {
+      recordDiagnostic?.('RETRY_REQUEST_FAILED', { stage: 'retry' });
       setLiveStatus('error', 'Could not retry', error.message || 'Refresh the Kahoot tab and try again.');
       if (retryAnswerBtn) retryAnswerBtn.disabled = !hasCurrentQuestion;
     }

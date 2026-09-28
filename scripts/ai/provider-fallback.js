@@ -137,9 +137,11 @@ export async function withProviderFallback(provider, apiKey, model, modelField, 
       ? `HTTP ${lastError.status}${lastError.message ? ` · ${lastError.message}` : ''}`
       : lastError.message;
     const bounded = attemptCounter.value >= MAX_PROVIDER_ATTEMPTS || Date.now() >= deadline;
-    throw new Error(bounded
+    const finalError = new Error(bounded
       ? `AI fallback budget ended after ${attemptCounter.value} attempts. Last error: ${reason}.`
       : `All configured AI attempts failed. Last error: ${reason}.`);
+    if (Number.isFinite(lastError.status)) finalError.status = lastError.status;
+    throw finalError;
   }
   throw new Error('AI request stopped because its time or fallback-attempt budget expired.');
 }

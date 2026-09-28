@@ -2,6 +2,7 @@
 import { DEFAULT_MODEL, DEFAULT_VISION_MODEL, DEPRECATED_MODELS } from '../core/constants.js';
 import { AI_REQUEST_BUDGET_MS } from '../ai/provider-client.js';
 import { answerJumbleQuestion, answerMultiSelect, answerOpenEndedQuestion, answerPinQuestion, answerQuestion, answerSliderQuestion } from '../ai/answer-questions.js';
+import { classifyAiFailure, createDiagnosticRecord, diagnosticPresentation, DIAGNOSTICS_STORAGE_KEY } from './diagnostics.js';
 
 const TAG = '[UwU Kahoot AI]';
 const STYLE = 'color:#c026d3;font-weight:bold';
@@ -9,7 +10,29 @@ const log = (...args) => console.log(`%c${TAG}`, STYLE, ...args);
 const err = (...args) => console.error(`%c${TAG}`, STYLE, ...args);
 const SOLVE_STATS_KEY = 'uwuKahootSolveStats';
 let solveStatsWriteQueue = Promise.resolve();
+let diagnosticWriteQueue = Promise.resolve();
 const activeQuestionRequests = new Map();
+
+function recordDiagnostic(code, metadata = {}) {
+  const record = createDiagnosticRecord(code, metadata);
+  diagnosticWriteQueue = diagnosticWriteQueue.catch(() => {}).then(async () => {
+    const stored = await chrome.storage.local.get(DIAGNOSTICS_STORAGE_KEY);
+    const events = Array.isArray(stored[DIAGNOSTICS_STORAGE_KEY]) ? stored[DIAGNOSTICS_STORAGE_KEY] : [];
+    const newest = events[0];
+    const elapsed = Date.now() - Date.parse(newest?.time || '');
+    if (newest?.code === record.code && newest?.stage === record.stage && newest?.provider === record.provider &&
+        newest?.httpStatus === record.httpStatus && elapsed >= 0 && elapsed < 5000) return;
+    await chrome.storage.local.set({ [DIAGNOSTICS_STORAGE_KEY]: [record, ...events].slice(0, 50) });
+  }).catch(() => err('Diagnostic history could not be saved.'));
+  return diagnosticWriteQueue;
+}
+
+self.addEventListener('error', event => {
+  void recordDiagnostic('EXTENSION_UNHANDLED_ERROR', { stage: 'background', errorName: event.error?.name });
+});
+self.addEventListener('unhandledrejection', event => {
+  void recordDiagnostic('EXTENSION_UNHANDLED_ERROR', { stage: 'background', errorName: event.reason?.name });
+});
 
 function recordGeneratedAnswer(solveId, question, answer, responseMs, signal) {
   if (!solveId || signal?.aborted) return Promise.resolve();
@@ -43,7 +66,10 @@ function recordGeneratedAnswer(solveId, question, answer, responseMs, signal) {
       solveIds: [solveId, ...solveIds].slice(0, 500)
     };
     await chrome.storage.local.set({ [SOLVE_STATS_KEY]: next });
-  }).catch(error => err('Could not save local solve stats:', error?.message || error));
+  }).catch(() => {
+    err('Could not save local solve stats.');
+    void recordDiagnostic('EXTENSION_STORAGE_ERROR', { stage: 'statistics' });
+  });
   return solveStatsWriteQueue;
 }
 
@@ -60,7 +86,8 @@ function recordGeneratedAnswer(solveId, question, answer, responseMs, signal) {
       log(`Migrated model settings`, next);
     }
   } catch (error) {
-    err('Model migration failed:', error);
+    err('Model migration failed.');
+    void recordDiagnostic('EXTENSION_STORAGE_ERROR', { stage: 'settings', errorName: error?.name });
   }
 })();
 
@@ -98,6 +125,11 @@ function isKahootTab(url) {
 }
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  if (msg.action === 'recordDiagnostic') {
+    recordDiagnostic(msg.code, msg.metadata || {}).then(() => sendResponse({ success: true }));
+    return true;
+  }
+
   if (msg.action === 'cancelQuestion') {
     const scope = getRequestScope(sender.tab?.id, sender.frameId);
     const active = activeQuestionRequests.get(scope);
@@ -127,7 +159,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({ ok: false, cancelled: true });
           return;
         }
-        sendResponse({ error: error.message });
+        const code = classifyAiFailure(error, 'background');
+        const diagnostic = diagnosticPresentation(code);
+        void recordDiagnostic(code, { stage: 'background', httpStatus: error?.status, errorName: error?.name });
+        sendResponse({ error: diagnostic.title, suggestion: diagnostic.recovery, diagnosticCode: diagnostic.code });
       })
       .finally(() => {
         if (activeQuestionRequests.get(scope) === active) activeQuestionRequests.delete(scope);
@@ -151,10 +186,23 @@ async function handleQuestion(question, tabId, frameId, requestId, solveId, sign
   if (!question?.title || !tabId) return;
   const t0 = performance.now();
   const ms = () => `${Math.round(performance.now() - t0)}ms`;
+  let stage = 'settings';
+  let activeProvider = null;
+  let activeModel = null;
+  let activeAttempt = null;
+  let activeHttpStatus = null;
   const answerOptions = {
     signal,
     deadline: Date.now() + AI_REQUEST_BUDGET_MS,
-    onProgress: progress => sendToTab(tabId, frameId, 'answerProgress', { ...progress, requestId })
+    onProgress: progress => {
+      stage = 'provider';
+      activeProvider = progress.provider || activeProvider;
+      activeModel = progress.model || activeModel;
+      activeAttempt = progress.attempt || activeAttempt;
+      if (progress.event === 'attempt') activeHttpStatus = null;
+      if (progress.event === 'failed') activeHttpStatus = progress.httpStatus || null;
+      sendToTab(tabId, frameId, 'answerProgress', { ...progress, requestId });
+    }
   };
 
   log(`Question received | Type: ${question.type || 'unknown'} | Choices: ${(question.choices || []).length}`);
@@ -186,6 +234,7 @@ async function handleQuestion(question, tabId, frameId, requestId, solveId, sign
         let imageUrl = question.imageUrl;
         let imageSource = imageUrl ? 'websocket' : null;
         if (!imageUrl) {
+          stage = 'image';
           const response = await sendToTabAsync(tabId, frameId, 'getPinImageUrl', { requestId });
           if (response?.stale) throw new Error('Question changed before the image could be read.');
           imageUrl = response?.imageUrl;
@@ -193,59 +242,71 @@ async function handleQuestion(question, tabId, frameId, requestId, solveId, sign
         }
         if (!imageUrl) throw new Error('No image found for pin question');
         log(`Pin image found (${imageSource})`);
+        stage = 'provider';
         const aiStartedAt = performance.now();
         const coords = await answerPinQuestion(question.title, imageUrl, answerOptions);
         if (signal?.aborted) return;
         const responseMs = Math.round(performance.now() - aiStartedAt);
         log(`Pin answer ready (${ms()})`);
         const statsWrite = recordGeneratedAnswer(solveId, question, `${coords.x}, ${coords.y}`, responseMs, signal);
+        stage = 'dispatch';
         sendToTab(tabId, frameId, 'placePin', { coords, options: opts, elapsed: ms(), requestId });
         await statsWrite;
         break;
       }
 
       case 'jumble': {
+        stage = 'provider';
         const aiStartedAt = performance.now();
         const answerWord = await answerJumbleQuestion(question.title, question.choices, answerOptions);
         if (signal?.aborted) return;
         const responseMs = Math.round(performance.now() - aiStartedAt);
         log(`Jumble answer ready (${ms()})`);
         const statsWrite = recordGeneratedAnswer(solveId, question, answerWord, responseMs, signal);
+        stage = 'dispatch';
         sendToTab(tabId, frameId, 'reorderJumble', { answerWord, options: opts, elapsed: ms(), requestId });
         await statsWrite;
         break;
       }
 
       case 'slider': {
+        stage = 'image';
         const imageUrl = await getQuestionImage(question, tabId, frameId, requestId);
+        stage = 'provider';
         const aiStartedAt = performance.now();
         const value = await answerSliderQuestion(question.title, question.sliderConfig || {}, imageUrl, answerOptions);
         if (signal?.aborted) return;
         const responseMs = Math.round(performance.now() - aiStartedAt);
         log(`Slider answer ready (${ms()})`);
         const statsWrite = recordGeneratedAnswer(solveId, question, value, responseMs, signal);
+        stage = 'dispatch';
         sendToTab(tabId, frameId, 'setSlider', { value, options: opts, elapsed: ms(), requestId });
         await statsWrite;
         break;
       }
 
       case 'open_ended': {
+        stage = 'image';
         const imageUrl = await getQuestionImage(question, tabId, frameId, requestId);
+        stage = 'provider';
         const aiStartedAt = performance.now();
         const answer = await answerOpenEndedQuestion(question.title, imageUrl, answerOptions);
         if (signal?.aborted) return;
         const responseMs = Math.round(performance.now() - aiStartedAt);
         log(`Open-ended answer ready (${ms()})`);
         const statsWrite = recordGeneratedAnswer(solveId, question, answer, responseMs, signal);
+        stage = 'dispatch';
         sendToTab(tabId, frameId, 'typeOpenEnded', { answer, options: opts, elapsed: ms(), requestId });
         await statsWrite;
         break;
       }
 
       default: {
+        stage = 'image';
         const imageUrl = await getQuestionImage(question, tabId, frameId, requestId);
         const isMultiSelect = question.type === 'multiple_select_quiz';
         let answers;
+        stage = 'provider';
         const aiStartedAt = performance.now();
         if (isMultiSelect) {
           answers = await answerMultiSelect(question.title, question.choices, imageUrl, answerOptions);
@@ -257,6 +318,7 @@ async function handleQuestion(question, tabId, frameId, requestId, solveId, sign
         const responseMs = Math.round(performance.now() - aiStartedAt);
         log(`Answer ready | Choices: ${answers.length} (${ms()})`);
         const statsWrite = recordGeneratedAnswer(solveId, question, answers.join(' · '), responseMs, signal);
+        stage = 'dispatch';
         sendToTab(tabId, frameId, 'highlightAnswer', { answers, isMultiSelect, options: opts, elapsed: ms(), requestId });
         await statsWrite;
       }
@@ -266,14 +328,36 @@ async function handleQuestion(question, tabId, frameId, requestId, solveId, sign
       log(`Question request cancelled (${ms()})`);
       return;
     }
-    err(`AI request failed (${ms()})`, error?.name || 'Error', error?.status ? `HTTP ${error.status}` : '');
-    sendToTab(tabId, frameId, 'showError', { message: error.message || 'Unknown error', requestId });
+    const code = classifyAiFailure(error, stage);
+    const diagnostic = diagnosticPresentation(code);
+    const metadata = {
+      stage,
+      provider: activeProvider,
+      model: activeModel,
+      httpStatus: error?.status || activeHttpStatus,
+      errorName: error?.name,
+      attempt: activeAttempt
+    };
+    err(`Question processing failed (${ms()})`, code, error?.status ? `HTTP ${error.status}` : '');
+    await recordDiagnostic(code, metadata);
+    sendToTab(tabId, frameId, 'showError', {
+      message: diagnostic.title,
+      suggestion: diagnostic.recovery,
+      diagnosticCode: diagnostic.code,
+      requestId
+    });
   }
 }
 
 function sendToTab(tabId, frameId, action, data = {}) {
   const options = Number.isInteger(frameId) && frameId >= 0 ? { frameId } : undefined;
-  chrome.tabs.sendMessage(tabId, { action, ...data }, options).catch(() => {});
+  try {
+    chrome.tabs.sendMessage(tabId, { action, ...data }, options).catch(() => {
+      void recordDiagnostic('CONTENT_SCRIPT_DISCONNECTED', { stage: action === 'answerProgress' ? 'provider' : 'dispatch' });
+    });
+  } catch (_) {
+    void recordDiagnostic('CONTENT_SCRIPT_DISCONNECTED', { stage: 'dispatch' });
+  }
 }
 
 function sendToTabAsync(tabId, frameId, action, data = {}) {
@@ -281,6 +365,7 @@ function sendToTabAsync(tabId, frameId, action, data = {}) {
   return new Promise(resolve => {
     chrome.tabs.sendMessage(tabId, { action, ...data }, options, response => {
       if (chrome.runtime.lastError) {
+        void recordDiagnostic('CONTENT_SCRIPT_DISCONNECTED', { stage: action === 'getQuestionImageUrl' || action === 'getPinImageUrl' ? 'image' : 'dispatch' });
         resolve(null);
         return;
       }

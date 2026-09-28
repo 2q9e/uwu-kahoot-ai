@@ -8,6 +8,7 @@
     answerFeedbackUi,
     showTimerOverlay,
     updateStatus,
+    recordDiagnostic,
     log,
     warn,
     getSubmitNonce,
@@ -36,13 +37,21 @@
 
       const textEls = await questionDom.pollForJumbleTextEls(myNonce);
       if (getSubmitNonce() !== myNonce) return;
-      if (textEls.length === 0) { updateStatus('Jumble tiles not found'); return; }
+      if (textEls.length === 0) {
+        recordDiagnostic?.('JUMBLE_TILES_MISSING', { stage: 'matching' });
+        updateStatus('Jumble tiles not found', 'Wait for the tiles to load or reload the Kahoot tab.');
+        return;
+      }
 
       const labels = textEls.map(el => el.textContent?.trim() || '');
       log(`Jumble tile labels read: ${labels.length}`);
 
       const order = matching.computeTileOrder(answerWord, labels);
-      if (!order) { updateStatus(`Can't map answer to tiles`); return; }
+      if (!order) {
+        recordDiagnostic?.('JUMBLE_ORDER_UNCLEAR', { stage: 'matching' });
+        updateStatus(`Can't map answer to tiles`, 'Check the visible tiles and retry.');
+        return;
+      }
       log('Jumble tile order calculated.');
 
       if (options.highlight !== false && !options.silentMode) answerFeedbackUi.showJumbleBadges(textEls, order);

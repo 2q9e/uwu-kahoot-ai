@@ -7,6 +7,7 @@
     waitForDomResult,
     showTimerOverlay,
     updateStatus,
+    recordDiagnostic,
     log,
     warn,
     getSubmitNonce,
@@ -31,6 +32,7 @@
         applyHighlights(elements, answers, isMultiSelect, options);
         return;
       }
+      recordDiagnostic?.('ANSWER_NO_CONTROLS', { stage: 'matching' });
       updateStatus('Error: no answer buttons found', 'The page did not expose answer controls. Try again when they appear.');
     }
 
@@ -77,6 +79,7 @@
       }
 
       if (matchedElements.length === 0) {
+        recordDiagnostic?.('ANSWER_NO_MATCH', { stage: 'matching' });
         updateStatus('Error: could not match answers', 'Try again or review the current question.');
         return;
       }
@@ -157,7 +160,10 @@
       }).then(value => {
         if (nonce !== getSubmitNonce()) return;
         if (value) run();
-        else updateStatus('Error: answer button did not become clickable');
+        else {
+          recordDiagnostic?.('ANSWER_NOT_CLICKABLE', { stage: 'dispatch' });
+          updateStatus('Error: answer button did not become clickable', 'Wait for Kahoot’s timer or loading state to finish, then retry.');
+        }
       });
     }
 

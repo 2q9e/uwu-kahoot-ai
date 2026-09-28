@@ -6,6 +6,7 @@
     answerFeedbackUi,
     showTimerOverlay,
     updateStatus,
+    recordDiagnostic,
     log,
     warn,
     getSubmitNonce,
@@ -24,7 +25,11 @@
 
       if (!inputReady) {
         const input = document.querySelector('input[data-functional-selector="text-answer-input"]');
-        if (!input) { updateStatus('✏️ Input not found'); return; }
+        if (!input) {
+          recordDiagnostic?.('TEXT_ANSWER_TARGET_MISSING', { stage: 'dispatch' });
+          updateStatus('Text answer field not found', 'Wait for the field to appear, then retry.');
+          return;
+        }
         warn('Open-ended: proceeding despite overlay check');
       } else {
         log('Open-ended: input found, overlay clear');
@@ -68,7 +73,11 @@
       let rangeInput = rangeInputReady;
       if (!rangeInput) {
         rangeInput = document.querySelector('input[data-functional-selector="slider-scale"]');
-        if (!rangeInput) { updateStatus('🎚️ Slider not found'); return; }
+        if (!rangeInput) {
+          recordDiagnostic?.('SLIDER_TARGET_MISSING', { stage: 'dispatch' });
+          updateStatus('Slider control not found', 'Wait for the slider to appear, then retry.');
+          return;
+        }
         warn('Slider: proceeding despite overlay check');
       } else {
         await new Promise(resolve => requestAnimationFrame(resolve));

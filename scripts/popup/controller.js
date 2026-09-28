@@ -46,6 +46,11 @@ const saveBtn         = document.getElementById('saveApi');
 const aiFeedback      = document.getElementById('aiFeedback');
 const MODEL_REASONING_STORAGE_KEY = 'modelReasoningEffort';
 
+function reportStorageFailure(stage = 'settings') {
+  try { chrome.runtime.sendMessage({ action: 'recordDiagnostic', code: 'EXTENSION_STORAGE_ERROR', metadata: { stage } }).catch(() => {}); }
+  catch (_) {}
+}
+
 const PROVIDERS = {
   openai: {
     key: 'openaiApiKey', modelKey: 'openaiModel', visionKey: 'openaiVisionModel',
@@ -256,6 +261,7 @@ function setAiFeedback(message, state = '') {
 
 function persistSync(values) {
   return chrome.storage.sync.set(values).then(() => true).catch(() => {
+    reportStorageFailure('settings');
     setAiFeedback('Could not save settings. Check extension storage and try again.', 'error');
     return false;
   });
@@ -346,6 +352,7 @@ function wireSettings() {
       setAiFeedback('Key added. Test it to check provider access.', 'success');
       await apiKeyManager.render(currentProvider);
     } catch (error) {
+      if (/storage|operation failed|context invalidated/i.test(String(error?.message || ''))) reportStorageFailure('settings');
       setAiFeedback(error.message || 'Could not add this key.', 'error');
     } finally {
       addApiKeyBtn.disabled = false;
@@ -391,6 +398,7 @@ function wireSettings() {
       setAiFeedback('Provider model settings saved.', 'success');
       saveSucceeded = true;
     } catch (_) {
+      reportStorageFailure('settings');
       setAiFeedback('Could not save. Check extension storage and try again.', 'error');
     } finally {
       saveBtn.disabled = false;
@@ -418,6 +426,7 @@ function wireSettings() {
   try {
     hasKey = await loadSettings();
   } catch (_) {
+    reportStorageFailure('settings');
     apiSettingsState = 'unavailable';
     updateApiStatus();
     setAiFeedback('Provider settings could not be loaded. Reopen the extension and try again.', 'error');

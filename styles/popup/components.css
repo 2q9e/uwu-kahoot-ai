@@ -93,6 +93,28 @@
 }
 .answer-handoff[data-stage="failed"], .answer-handoff[data-stage="send_failed"] { border-color: rgba(252,165,165,.24); color: #ffc1c1; }
 .answer-handoff[data-stage="sent"], .answer-handoff[data-stage="highlighted"] { border-color: rgba(134,239,172,.18); color: #c6f6d5; }
+.diagnostics-panel {
+  margin: 0 0 10px;
+  border: 1px solid rgba(240,171,252,.12);
+  border-radius: 11px;
+  background: rgba(0,0,0,.13);
+  color: #b9c2be;
+}
+.diagnostics-panel > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 10px; color: #d9c7de; cursor: pointer; font-size: 10px; font-weight: 750; list-style-position: inside; }
+.diagnostics-count { color: #82908a; font-size: 9px; font-weight: 600; }
+.diagnostics-tools { padding: 0 10px 8px; }
+.diagnostics-tools p, .diagnostics-empty, .diagnostics-action-status { margin: 0 0 8px; color: #82908a; font-size: 9px; line-height: 1.45; }
+.diagnostics-tools > div { display: flex; gap: 6px; }
+.btn-diagnostic { padding: 5px 8px; border: 1px solid rgba(240,171,252,.16); border-radius: 7px; background: rgba(192,38,211,.07); color: #e7cce8; font: inherit; font-size: 9px; cursor: pointer; }
+.btn-diagnostic:disabled { opacity: .42; cursor: default; }
+.diagnostics-list { display: grid; gap: 7px; margin: 0; padding: 0 9px 9px; list-style: none; }
+.diagnostic-event { padding: 8px; border: 1px solid rgba(255,255,255,.055); border-radius: 8px; background: rgba(255,255,255,.025); }
+.diagnostic-event-head { display: flex; justify-content: space-between; gap: 8px; color: #f0d6ef; font-size: 9px; font-weight: 700; }
+.diagnostic-event time { color: #77827d; font-size: 8px; font-weight: 500; text-align: right; }
+.diagnostic-event p { margin: 4px 0 0; color: #9ca8a2; font-size: 9px; line-height: 1.4; }
+.diagnostic-event .diagnostic-recovery { color: #cbb2d1; }
+.diagnostic-meta { color: #77827d !important; }
+.diagnostic-report { box-sizing: border-box; width: calc(100% - 18px); min-height: 100px; margin: 0 9px 8px; padding: 8px; border: 1px solid rgba(240,171,252,.13); border-radius: 8px; background: rgba(0,0,0,.2); color: #cbd5d1; font: 9px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace; resize: vertical; }
 .live-empty {
   padding: 12px 10px;
   border-radius: 10px;

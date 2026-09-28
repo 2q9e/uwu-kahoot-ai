@@ -6,6 +6,7 @@
     answerFeedbackUi,
     showTimerOverlay,
     updateStatus,
+    recordDiagnostic,
     log,
     warn,
     getSubmitNonce,
@@ -54,7 +55,11 @@
 
       if (!svgEl) {
         svgEl = document.querySelector('[data-functional-selector="pin-input-svg"]');
-        if (!svgEl) { updateStatus('Pin SVG not found'); return; }
+        if (!svgEl) {
+          recordDiagnostic?.('PIN_TARGET_MISSING', { stage: 'dispatch' });
+          updateStatus('Pin target not found', 'Wait for the map or image to load, then retry.');
+          return;
+        }
         warn('Pin: proceeding despite overlay check');
       } else {
         await new Promise(resolve => requestAnimationFrame(resolve));
