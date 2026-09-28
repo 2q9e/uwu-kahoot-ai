@@ -17,6 +17,11 @@
         ? previousChoices.map(choice => String(choice ?? '').trim().toLocaleLowerCase())
         : [];
       const fallbackIsComplete = fallbacks.length >= requiredCount && fallbacks.every(Boolean);
+      const isPreviousQuestionChoices = choices => {
+        const normalized = choices.map(choice => String(choice ?? '').trim().toLocaleLowerCase());
+        return previous.length > 1 && previous.length === normalized.length &&
+          previous.every((choice, index) => choice === normalized[index]);
+      };
 
       const readChoices = () => {
         const findElements = domAdapter.findVisibleAnswerElements || domAdapter.findAnswerElements;
@@ -37,10 +42,7 @@
         const readExpandedChoices = () => {
           const choices = readChoices();
           if (!choices || choices.length <= fallbacks.length) return null;
-          const normalized = choices.map(choice => String(choice ?? '').trim().toLocaleLowerCase());
-          const isPreviousQuestion = previous.length > 1 && previous.length === normalized.length &&
-            previous.every((choice, index) => choice === normalized[index]);
-          return isPreviousQuestion ? null : choices;
+          return isPreviousQuestionChoices(choices) ? null : choices;
         };
         const expandedChoices = await waitForDomResult(readExpandedChoices, {
           timeout: 900,
@@ -55,7 +57,10 @@
         return fallbacks;
       }
 
-      const choices = await waitForDomResult(readChoices, {
+      const choices = await waitForDomResult(() => {
+        const current = readChoices();
+        return current && !isPreviousQuestionChoices(current) ? current : null;
+      }, {
         timeout: 4500,
         nonce,
         settleMs: Number(expectedCount) > 0 ? 240 : 500
