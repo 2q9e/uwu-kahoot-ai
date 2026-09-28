@@ -25,6 +25,7 @@
         </div>
       </div>
       <div id="apiStatus" class="api-pill checking" role="status" aria-busy="true">Checking keys…</div>
+      <button id="retrySettingsLoad" class="api-retry hidden" type="button">Retry settings</button>
     </header>
 
     <div class="dashboard-launch-row">
@@ -37,20 +38,22 @@
       <div>
         <span class="section-kicker">PROVIDER SETUP</span>
         <h2 id="apiPageTitle">AI provider settings</h2>
-        <p>Choose an AI service, manage saved keys, and configure answer models and fallbacks.</p>
+        <p>Choose a provider, add a key, then set your answer models. Advanced routing and model tools are below.</p>
       </div>
-      <nav class="api-page-nav" aria-label="API settings sections">
-        <a href="#providerPanel">Provider</a>
-        <a href="#apiKeysPanel">Keys</a>
-        <a href="#modelSettingsPanel">Models</a>
-        <a href="#fastBinaryPanel">Speed</a>
-        <a href="#modelCatalogPanel">Catalog</a>
-        <a class="api-page-exit" href="dashboard.html">Workspace ↗</a>
-        <a class="api-page-exit" href="stats.html">Stats ↗</a>
-      </nav>
     </section>
 
     <main>
+    <nav id="apiPageNav" class="api-page-nav hidden" aria-label="API settings sections">
+      <a href="#providerPanel">Provider</a>
+      <a href="#apiKeysPanel">Keys</a>
+      <a href="#modelSettingsPanel">Models</a>
+      <a href="#backupModelsPanel">Backups</a>
+      <a href="#fastBinaryPanel">Fast lane</a>
+      <a href="#modelCatalogPanel">Catalog</a>
+      <a href="#saveSettingsPanel">Save</a>
+      <a class="api-page-exit" href="dashboard.html">Workspace ↗</a>
+      <a class="api-page-exit" href="stats.html">Stats ↗</a>
+    </nav>
     <section class="kahoot-attachment" aria-label="Kahoot tab connection">
       <div class="kahoot-attachment-heading">
         <label for="kahootTabSelect">Attached Kahoot tab</label>
@@ -150,8 +153,9 @@
             <option value="gemini">Google AI Studio (Gemini)</option>
             <option value="openrouter">OpenRouter</option>
           </select>
+          <p class="setting-note">Provider choice, fallback, and API key changes apply immediately. Model, backup, reasoning, and fast-lane settings save separately.</p>
           <div class="toggle-row"><label for="aiFallback">Fallback to other saved providers</label><label class="toggle"><input type="checkbox" id="aiFallback" checked><span class="toggle-track"></span></label></div>
-          <div class="openai-note">On rate limits, outages, or key errors, quiz text or images may go to another provider with a saved key. Its usage limits and billing apply.</div>
+          <div class="openai-note">When fallback is enabled, retryable provider errors can include connection failures, timeouts, access or billing errors, rate limits, unavailable models, and service errors. A retry may send question text or images to another provider with a saved key. Each provider's privacy terms, usage limits, and billing apply.</div>
         </section>
         <section id="apiKeysPanel" class="api-panel" aria-labelledby="apiKeysPanelTitle">
           <div class="api-panel-heading"><div><span class="section-kicker">CREDENTIALS</span><h3 id="apiKeysPanelTitle">API key manager</h3></div></div>
@@ -167,9 +171,10 @@
               <summary>Add an API key</summary>
               <label class="field-label" for="newApiKeyLabel">Label</label>
               <input id="newApiKeyLabel" class="field-input" type="text" maxlength="60" autocomplete="off">
-              <label class="field-label" for="newApiKeySecret">Provider API key</label>
+              <label class="field-label" for="newApiKeySecret"><span id="newApiKeyProviderLabel">OpenAI API key</span></label>
+              <p id="keySaveNote" class="setting-note key-save-note">Adding a key saves it immediately for the selected provider. Finish the key draft or clear both fields before switching.</p>
               <div class="key-input-row">
-                <input type="password" id="newApiKeySecret" class="field-input" aria-label="New provider API key" aria-describedby="keyStorageNote" autocomplete="new-password" spellcheck="false">
+                <input type="password" id="newApiKeySecret" class="field-input" aria-describedby="keySaveNote keyStorageNote" autocomplete="new-password" spellcheck="false">
                 <button id="toggleNewApiKeyVisibility" class="btn-key-visibility" type="button" aria-controls="newApiKeySecret" aria-pressed="false" aria-label="Show new API key">Show</button>
               </div>
               <button id="addApiKey" class="btn-save add-key-button" type="button">Add key</button>
@@ -271,10 +276,10 @@
         </div>
         </section>
         <section id="saveSettingsPanel" class="api-panel api-save-panel" aria-labelledby="saveSettingsTitle">
-          <div class="api-panel-heading"><div><span class="section-kicker">SAVE CHANGES</span><h3 id="saveSettingsTitle">Save provider setup</h3></div></div>
+          <div class="api-panel-heading"><div><span class="section-kicker">SAVE CHANGES</span><h3 id="saveSettingsTitle">Save model settings</h3></div></div>
         <div id="providerQuota" class="provider-quota" role="status" aria-live="polite"></div>
         <div class="openai-actions">
-          <button id="saveApi" class="btn-save" type="button" disabled>Save</button>
+          <button id="saveApi" class="btn-save" type="button" disabled>Save model settings</button>
         </div>
         <p id="aiFeedback" class="settings-feedback" role="status" aria-live="polite"></p>
         <div id="keyStorageNote" class="openai-note">Provider credentials are not synced or encrypted by this extension; anyone with access to this browser profile or extension storage may be able to read them. “Test key” makes a no-generation request to the provider. Keys from the optional local config file are imported on first use; removing a manager entry does not erase the copy in that file.</div>

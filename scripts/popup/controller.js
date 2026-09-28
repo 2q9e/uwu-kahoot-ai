@@ -18,6 +18,8 @@ const openStatsBtn = document.getElementById('openStats');
 const openStatsCardBtn = document.getElementById('openStatsCard');
 const openApiDashboardBtn = document.getElementById('openApiDashboard');
 const apiPageIntro = document.getElementById('apiPageIntro');
+const apiPageNav = document.getElementById('apiPageNav');
+const retrySettingsLoadBtn = document.getElementById('retrySettingsLoad');
 const highlightCb     = document.getElementById('highlight');
 const autoclickCb     = document.getElementById('autoclick');
 const pinHighlightCb  = document.getElementById('pinHighlight');
@@ -32,6 +34,7 @@ const collapseArrow   = document.getElementById('collapseArrow');
 const providerSelect  = document.getElementById('aiProvider');
 const newApiKeyLabel = document.getElementById('newApiKeyLabel');
 const newApiKeySecret = document.getElementById('newApiKeySecret');
+const newApiKeyProviderLabel = document.getElementById('newApiKeyProviderLabel');
 const addApiKeyBtn = document.getElementById('addApiKey');
 const toggleNewApiKeyVisibility = document.getElementById('toggleNewApiKeyVisibility');
 const saveBtn         = document.getElementById('saveApi');
@@ -94,6 +97,7 @@ if (isApiPage) {
   document.body.classList.add('api-page');
   document.title = 'UwU Kahoot AI · Provider settings';
   apiPageIntro?.classList.remove('hidden');
+  apiPageNav?.classList.remove('hidden');
   if (versionLabel) versionLabel.textContent = 'Provider settings';
 }
 
@@ -147,7 +151,7 @@ function updateApiStatus() {
     const unavailable = apiSettingsState === 'unavailable';
     apiStatus.textContent = unavailable ? 'Settings unavailable' : 'Checking keys…';
     apiStatus.className = `api-pill ${unavailable ? 'missing' : 'checking'}`;
-    apiStatus.title = unavailable ? 'Extension storage could not be read. Reopen the extension and try again.' : 'Checking the configured provider keys.';
+    apiStatus.title = unavailable ? 'Extension storage could not be read. Use Retry settings to try again.' : 'Checking the configured provider keys.';
     apiStatus.setAttribute('aria-busy', String(!unavailable));
     return;
   }
@@ -192,6 +196,10 @@ function updateApiStatus() {
 
 function updateDelayLabel(value) {
   if (delayValue) delayValue.textContent = value > 0 ? `${value}s` : 'Off';
+}
+
+function updateNewApiKeyProviderLabel() {
+  if (newApiKeyProviderLabel) newApiKeyProviderLabel.textContent = PROVIDER_KEY_LABELS[currentProvider] || 'Provider API key';
 }
 
 
@@ -244,6 +252,7 @@ async function loadSettings() {
   const storedProvider = settings.aiProvider;
   currentProvider = PROVIDERS[storedProvider] ? storedProvider : DEFAULT_AI_PROVIDER;
   if (providerSelect) providerSelect.value = currentProvider;
+  updateNewApiKeyProviderLabel();
   modelCatalog.setReasoningEffort(settings[MODEL_REASONING_STORAGE_KEY]);
   return loadProviderFields(currentProvider);
 }
@@ -266,6 +275,22 @@ function persistSync(values) {
   });
 }
 
+async function loadSettingsWithRecovery() {
+  try {
+    const hasKey = await loadSettings();
+    retrySettingsLoadBtn?.classList.add('hidden');
+    return hasKey;
+  } catch (_) {
+    reportStorageFailure('settings');
+    apiSettingsState = 'unavailable';
+    updateApiStatus();
+    modelCatalog.setProviderFieldsLoading(false);
+    retrySettingsLoadBtn?.classList.remove('hidden');
+    setAiFeedback('Provider settings could not be loaded. Check extension storage, then retry.', 'error');
+    return false;
+  }
+}
+
 function wireSettings() {
   const persistCheckbox = (input, key) => input?.addEventListener('change', async () => {
     const nextValue = input.checked;
@@ -286,6 +311,29 @@ function wireSettings() {
     updateApiStatus();
   });
 
+  retrySettingsLoadBtn?.addEventListener('click', async () => {
+    retrySettingsLoadBtn.disabled = true;
+    retrySettingsLoadBtn.textContent = 'Retrying…';
+    apiSettingsState = 'loading';
+    updateApiStatus();
+    modelCatalog.setProviderFieldsLoading(true);
+    setAiFeedback('Retrying provider settings…');
+    try {
+      await loadSettings();
+      retrySettingsLoadBtn.classList.add('hidden');
+      if (!providerKeyLoadErrors.has(currentProvider)) setAiFeedback('Settings loaded.', 'success');
+    } catch (_) {
+      reportStorageFailure('settings');
+      apiSettingsState = 'unavailable';
+      updateApiStatus();
+      modelCatalog.setProviderFieldsLoading(false);
+      setAiFeedback('Provider settings could not be loaded. Check extension storage, then retry.', 'error');
+    } finally {
+      retrySettingsLoadBtn.disabled = false;
+      retrySettingsLoadBtn.textContent = 'Retry settings';
+    }
+  });
+
   let delayDebounce = null;
   delaySlider?.addEventListener('input', () => {
     const v = parseFloat(delaySlider.value);
@@ -295,12 +343,23 @@ function wireSettings() {
   });
 
   providerSelect?.addEventListener('change', async () => {
-    const changeToken = ++providerChangeToken;
     const nextProvider = providerSelect.value;
-    if (!PROVIDERS[nextProvider]) return;
+    if (!PROVIDERS[nextProvider]) {
+      providerSelect.value = currentProvider;
+      return;
+    }
+    const hasKeyDraft = Boolean(newApiKeySecret?.value.trim() || newApiKeyLabel?.value.trim());
+    if (nextProvider !== currentProvider && hasKeyDraft) {
+      providerSelect.value = currentProvider;
+      setAiFeedback('Finish this key draft or clear both fields before switching providers.', 'error');
+      (newApiKeySecret?.value.trim() ? newApiKeySecret : newApiKeyLabel)?.focus();
+      return;
+    }
+    const changeToken = ++providerChangeToken;
     const previousProvider = currentProvider;
     modelCatalog.captureCurrentDraft();
     currentProvider = nextProvider;
+    updateNewApiKeyProviderLabel();
     modelCatalog.setProviderFieldsLoading(true);
     modelCatalog.resetVisibleModelLimit();
     if (newApiKeySecret) newApiKeySecret.type = 'password';
@@ -314,6 +373,7 @@ function wireSettings() {
         if (changeToken === providerChangeToken) {
           currentProvider = previousProvider;
           providerSelect.value = previousProvider;
+          updateNewApiKeyProviderLabel();
         }
         return;
       }
@@ -382,7 +442,7 @@ function wireSettings() {
     let saveSucceeded = false;
     saveBtn.disabled = true;
     if (providerSelect) providerSelect.disabled = true;
-    setAiFeedback('Saving provider settings…');
+    setAiFeedback('Saving model settings…');
     try {
       await chrome.storage.sync.set({
         aiProvider: currentProvider,
@@ -405,11 +465,11 @@ function wireSettings() {
       };
       modelCatalog.refreshSelectionSummary();
       updateApiStatus();
-      setAiFeedback('Provider model settings saved.', 'success');
+      setAiFeedback('Model settings saved.', 'success');
       saveSucceeded = true;
     } catch (_) {
       reportStorageFailure('settings');
-      setAiFeedback('Could not save. Check extension storage and try again.', 'error');
+      setAiFeedback('Could not save model settings. Check extension storage and try again.', 'error');
     } finally {
       if (!modelCatalog.isProviderFieldsLoading()) {
         saveBtn.disabled = false;
@@ -435,15 +495,7 @@ function wireSettings() {
     initializePopupStats();
     await initializeLiveSession();
   }
-  let hasKey = false;
-  try {
-    hasKey = await loadSettings();
-  } catch (_) {
-    reportStorageFailure('settings');
-    apiSettingsState = 'unavailable';
-    updateApiStatus();
-    setAiFeedback('Provider settings could not be loaded. Reopen the extension and try again.', 'error');
-  }
+  const hasKey = await loadSettingsWithRecovery();
   wireSettings();
   modelCatalog.wireModelControls();
   await modelCatalog.loadGeminiSpeedMeasurements();

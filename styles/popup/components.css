@@ -18,6 +18,9 @@
 .title { font-size: 1.17em; letter-spacing: -.3px; }
 .version { display: block; margin-top: 1px; color: #777; }
 .api-pill { padding: 5px 9px; font-size: 10.5px; letter-spacing: .1px; }
+.api-retry { flex: 0 0 auto; min-height: 30px; padding: 0 8px; border: 1px solid rgba(232,121,249,.24); border-radius: 8px; background: rgba(192,38,211,.11); color: #f5dafa; font: 650 10px system-ui, sans-serif; cursor: pointer; }
+.api-retry:disabled { opacity: .6; cursor: wait; }
+.api-retry:focus-visible { outline: 2px solid #f5d0fe; outline-offset: 2px; }
 .api-pill.ok { color: #f5d0fe; }
 .api-pill.local { background: rgba(192,38,211,.1); border-color: rgba(192,38,211,.24); color: #f5d0fe; }
 .api-pill.fallback { background: rgba(96,165,250,.12); border-color: rgba(96,165,250,.28); color: #bfdbfe; }

@@ -297,8 +297,8 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
     fastBinaryModelSelect?.addEventListener('change', () => {
       refreshSelectionSummary();
       setAiFeedback(fastBinaryModelSelect.value
-        ? 'Fast-lane model changed. Save provider settings to apply it.'
-        : 'Automatic fast-lane model selected. Save provider settings to apply it.');
+        ? 'Fast-lane model changed. Save model settings to apply it.'
+        : 'Automatic fast-lane model selected. Save model settings to apply it.');
     });
     for (const select of backupModelSelects) select.addEventListener('change', () => {
       const backups = backupModelUi.currentBackupSelection();
@@ -313,7 +313,7 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
       backupModelUi.populateBackupSlots(providerCatalog.getModels(getCurrentProvider()), backups, config.defaultModel);
       refreshSelectionSummary();
       modelRenderer.renderModelCatalog();
-      setAiFeedback('Provider default models selected. Save provider settings to apply them.');
+      setAiFeedback('Provider default models selected. Save model settings to apply them.');
     });
     useFastestModelButton?.addEventListener('click', () => {
       const provider = getCurrentProvider();
@@ -347,7 +347,7 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
       backupModelUi.populateBackupSlots(models, backups, modelInput?.value || config.defaultModel);
       refreshSelectionSummary();
       modelRenderer.renderModelCatalog();
-      setAiFeedback(`Selected ${modelInput?.value || config.defaultModel} using ${source}. Save provider settings to apply it.`, 'success');
+      setAiFeedback(`Selected ${modelInput?.value || config.defaultModel} using ${source}. Save model settings to apply it.`, 'success');
     });
   }
 

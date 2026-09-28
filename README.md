@@ -66,12 +66,12 @@ The model catalog shows the provider-reported details it can retrieve. Gemini sp
 1. Extract the extension folder somewhere you plan to keep it.
 2. Open Chrome's Extensions page and turn on **Developer mode**.
 3. Choose **Load unpacked** and select the folder that contains `manifest.json`.
-4. Open UwU Kahoot AI, choose a provider, add its API key, and save.
+4. Open UwU Kahoot AI and choose a provider. Provider selection, fallback, and API key changes apply immediately; save model settings when you're ready.
 5. Open a Kahoot player tab to see its live session status.
 
 ### Configure provider keys and backups
 
-Open **API Configuration** in the popup or dashboard. Add a key for each provider you want available, choose the provider/model order, and enable fallback as desired. Keys are saved locally in the current browser profile and are sent only to the provider selected for a request or fallback attempt.
+Open **API settings** in the popup or dashboard. Choosing a provider, changing the fallback setting, and adding or removing API keys take effect immediately. Model, backup, reasoning, and fast-lane changes stay in the form until you select **Save model settings**. Add a key for each provider you want available and choose the provider/model order. Keys are saved locally in the current browser profile and are sent only to the provider selected for a request or fallback attempt.
 
 The **Fast True/False lane** is enabled by default and can be turned off. It only applies when the player page exposes exactly the `True` and `False` choices and no image is needed. Automatic OpenRouter routing uses the fastest free model in its cached throughput catalog; Google AI Studio uses the quickest previously measured model, or Gemini 3.5 Flash-Lite before a speed check. A reply must be only `TRUE` or `FALSE`; otherwise the configured primary model answers normally. Choose a provider-specific override from the live model catalog when you want a different fast model.
 

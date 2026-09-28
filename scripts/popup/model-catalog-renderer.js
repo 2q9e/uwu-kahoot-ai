@@ -41,7 +41,7 @@ export function createModelCatalogRenderer({
       if (modelInput) modelInput.value = model.id;
       populateBackupSlots(allModels, currentBackupSelection(), model.id);
       onSelectionChange();
-      setAiFeedback(`Selected ${model.name}. Save provider settings to apply it.`, '');
+      setAiFeedback(`Selected ${model.name}. Save model settings to apply it.`, '');
       renderModelCatalog();
     });
     actions.append(useText);
@@ -51,7 +51,7 @@ export function createModelCatalogRenderer({
       useVision.addEventListener('click', () => {
         if (visionInput) visionInput.value = model.id;
         onSelectionChange();
-        setAiFeedback(`Selected ${model.name} for image questions. Save provider settings to apply it.`, '');
+        setAiFeedback(`Selected ${model.name} for image questions. Save model settings to apply it.`, '');
         renderModelCatalog();
       });
       actions.append(useVision);
@@ -72,7 +72,7 @@ export function createModelCatalogRenderer({
       }
       populateBackupSlots(allModels, next, modelInput?.value || '');
       onSelectionChange();
-      setAiFeedback(`Added ${model.name} as backup ${next.length}. Save provider settings to apply it.`, 'success');
+      setAiFeedback(`Added ${model.name} as backup ${next.length}. Save model settings to apply it.`, 'success');
       renderModelCatalog();
     });
     actions.append(addBackup);

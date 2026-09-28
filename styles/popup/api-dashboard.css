@@ -72,13 +72,22 @@ body.api-page .title { font-size: 20px; }
 body.api-page .version { color: #9b8da0; font-size: 10px; letter-spacing: .35px; }
 body.api-page .api-pill { padding: 7px 11px; font-size: 11px; }
 body.api-page .dashboard-launch-row { display: none; }
+body.api-page .api-retry {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 157, 218, .24);
+  border-radius: 9px;
+  background: rgba(214, 66, 168, .12);
+  color: #ffe5f6;
+  font: 650 12px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+body.api-page .api-retry:disabled { opacity: .65; cursor: wait; }
+body.api-page .api-retry:focus-visible { outline: 2px solid #ffd0ec; outline-offset: 3px; }
 
 body.api-page .api-page-intro {
   position: relative;
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 28px;
+  display: block;
   margin: 0 0 18px;
   padding: 12px 0 20px;
   border-bottom: 1px solid rgba(255, 157, 218, .14);
@@ -102,27 +111,33 @@ body.api-page .api-page-intro p {
 }
 
 body.api-page .api-page-nav {
+  position: sticky;
+  z-index: 20;
+  top: 8px;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 6px;
-  max-width: 590px;
-  padding: 6px;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 7px;
   border: 1px solid rgba(255,255,255,.08);
   border-radius: 10px;
-  background: rgba(35, 19, 41, .52);
+  background: rgba(24, 13, 29, .91);
+  box-shadow: 0 10px 26px rgba(7, 3, 10, .28);
+  backdrop-filter: blur(14px);
 }
 
 body.api-page .api-page-nav a {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
-  padding: 0 10px;
+  min-height: 40px;
+  padding: 0 12px;
   border: 1px solid transparent;
   border-radius: 8px;
   color: #bdb2c1;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
   text-decoration: none;
   transition: background .16s ease, color .16s ease, border-color .16s ease, transform .16s ease;
@@ -147,7 +162,7 @@ body.api-page .api-page-nav .api-page-exit {
 }
 
 body.api-page main { display: block; }
-body.api-page main > :not(#apiSettingsCard) { display: none !important; }
+body.api-page main > :not(#apiSettingsCard):not(.api-page-nav) { display: none !important; }
 body.api-page #apiSettingsCard {
   margin: 0;
   padding: 0;
@@ -175,7 +190,7 @@ body.api-page .api-panel {
   border-radius: 17px;
   background: #1b111f;
   box-shadow: inset 0 1px rgba(255,255,255,.035);
-  scroll-margin-top: 18px;
+  scroll-margin-top: 112px;
 }
 
 body.api-page .api-panel-heading {
@@ -194,7 +209,11 @@ body.api-page .api-panel-heading h3 {
   letter-spacing: -.3px;
 }
 
-body.api-page .api-panel .field-label { margin-top: 10px; }
+body.api-page .api-panel .field-label { margin-top: 10px; font-size: 12px; letter-spacing: .35px; }
+body.api-page .setting-note,
+body.api-page .openai-note { font-size: 12px; line-height: 1.55; }
+body.api-page .setting-note { color: #c5b5cb; }
+body.api-page .openai-note { color: #c5b5cb; }
 body.api-page #aiProvider { width: 100%; min-height: 42px; font-size: 12px; }
 body.api-page .api-panel .toggle-row { margin-top: 8px; }
 body.api-page .api-panel .openai-note { max-width: 850px; }
@@ -202,9 +221,9 @@ body.api-page .api-key-manager { margin-top: 0; padding: 15px; border-color: rgb
 body.api-page .api-key-list,
 body.api-page .local-config-keys { grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); }
 body.api-page .api-key-card { padding: 12px; }
-body.api-page .api-key-summary { padding: 9px 11px; font-size: 10px; }
+body.api-page .api-key-summary { padding: 9px 11px; font-size: 11px; }
 body.api-page .add-api-key { margin-top: 13px; padding-top: 12px; }
-body.api-page .add-api-key summary { font-size: 11px; }
+body.api-page .add-api-key summary { font-size: 12px; }
 body.api-page .model-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 body.api-page .model-col { min-width: 0; }
 body.api-page .model-row .field-input { min-height: 40px; }
@@ -212,7 +231,7 @@ body.api-page .model-selection-summary { padding: 16px; }
 body.api-page .model-selection-summary-grid p > strong { font-size: 11px; }
 body.api-page .model-selection-summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 body.api-page .model-quick-picks { padding: 13px; }
-body.api-page .model-quick-pick-actions .catalog-action { min-height: 34px; font-size: 10px; }
+body.api-page .model-quick-pick-actions .catalog-action { min-height: 38px; font-size: 12px; }
 body.api-page .reasoning-row,
 body.api-page .model-backups,
 body.api-page .model-catalog,
@@ -221,21 +240,22 @@ body.api-page .reasoning-row .setting-note { max-width: 900px; }
 body.api-page .fast-binary-row { margin-top: 0; }
 body.api-page .backup-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; }
 body.api-page .backup-slots label:last-child:nth-child(odd) { grid-column: 1 / -1; }
-body.api-page .backup-slots .field-select { min-height: 39px; font-size: 11px; }
-body.api-page .model-catalog-list { max-height: min(540px, 68vh); grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+body.api-page .backup-slots .field-select { min-height: 42px; font-size: 12px; }
+body.api-page .model-catalog-list { max-height: none; overflow: visible; overscroll-behavior: auto; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
 body.api-page .catalog-search { min-height: 40px; }
-body.api-page .catalog-capability-filter { min-height: 40px; font-size: 11px; }
+body.api-page .catalog-capability-filter { min-height: 42px; font-size: 12px; }
 body.api-page .model-card { padding: 13px; }
-body.api-page .model-card-heading strong { font-size: 12px; }
+body.api-page .model-card-heading strong { font-size: 13px; }
 body.api-page .model-card-heading code { font-size: 10px; }
 body.api-page .model-card-meta,
 body.api-page .model-card-speed,
-body.api-page .model-card-description { font-size: 10px; }
+body.api-page .model-card-description { font-size: 11px; line-height: 1.5; }
 body.api-page .catalog-action,
-body.api-page .btn-catalog { min-height: 34px; font-size: 10px; }
+body.api-page .btn-catalog { min-height: 38px; font-size: 12px; }
 body.api-page .api-save-panel { border-color: rgba(240,171,252,.16); background: linear-gradient(145deg, rgba(192,38,211,.075), rgba(255,255,255,.022)); }
 body.api-page .openai-actions { display: flex; justify-content: flex-start; }
-body.api-page #saveApi { min-width: 185px; min-height: 42px; font-size: 12px; }
+body.api-page #saveApi { min-width: 195px; min-height: 46px; font-size: 13px; }
+body.api-page #saveSettingsPanel { scroll-margin-top: 72px; }
 body.api-page #keyStorageNote { max-width: 950px; margin-top: 14px; }
 body.api-page .footer { display: none; }
 
@@ -254,7 +274,8 @@ body.api-page .footer { display: none; }
   body.api-page .popup-scroll { padding: 18px 14px 36px; }
   body.api-page .header { margin-bottom: 18px; }
   body.api-page .api-page-intro { display: block; }
-  body.api-page .api-page-nav { justify-content: flex-start; max-width: none; margin-top: 15px; }
+  body.api-page .api-page-nav { top: 5px; gap: 5px; margin-top: 0; }
+  body.api-page .api-page-nav a { min-height: 38px; padding-inline: 10px; font-size: 11px; }
   body.api-page .model-row { grid-template-columns: 1fr; gap: 2px; }
   body.api-page .backup-slots { grid-template-columns: 1fr; }
   body.api-page .backup-slots label:last-child:nth-child(odd) { grid-column: auto; }

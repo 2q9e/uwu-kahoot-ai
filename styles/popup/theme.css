@@ -73,6 +73,7 @@ body.api-page.popup-container {
 }
 .api-pill.checking { color: #c5b4c8; }
 .api-pill.missing { border-color: rgba(255, 195, 109, .24); }
+.api-retry { border-color: rgba(255, 157, 218, .24); background: rgba(214, 66, 168, .12); color: #ffe5f6; }
 
 .kahoot-attachment,
 .live-card,

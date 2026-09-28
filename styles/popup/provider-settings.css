@@ -85,7 +85,7 @@
 .add-api-key > .field-input { margin-bottom: 4px; }
 .add-key-button { width: 100%; margin-top: 8px; }
 .openai-note { margin-top: 9px; }
-body.dashboard-embedded .model-catalog-list { max-height: min(580px, 70vh); }
+body.dashboard-embedded .model-catalog-list { max-height: none; overflow: visible; overscroll-behavior: auto; }
 body.dashboard-embedded .backup-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 body.dashboard-embedded .backup-slots label:last-child:nth-child(odd) { grid-column: 1 / -1; }
 @media (prefers-reduced-motion: reduce) {
