@@ -157,33 +157,35 @@ export function createProviderKeyCard({
     }
   }
 
-  label.addEventListener('change', async () => {
+  async function updateKeyAndRefresh(patch, successMessage, mutationFailureMessage) {
     try {
-      await updateProviderApiKey(provider, record.id, { label: label.value });
-      setAiFeedback('Key label updated.', 'success');
+      await updateProviderApiKey(provider, record.id, patch);
+      setAiFeedback(successMessage, 'success');
     } catch (error) {
-      setAiFeedback(error.message || 'Could not update the key label.', 'error');
+      setAiFeedback(mutationFailureMessage(error), 'error');
     }
     try {
       await refresh();
     } catch (error) {
       setAiFeedback(error.message || 'Could not reload saved keys.', 'error');
     }
+  }
+
+  label.addEventListener('change', async () => {
+    await updateKeyAndRefresh(
+      { label: label.value },
+      'Key label updated.',
+      error => error.message || 'Could not update the key label.'
+    );
   });
 
   enabled.addEventListener('change', async () => {
     enabled.disabled = true;
-    try {
-      await updateProviderApiKey(provider, record.id, { enabled: enabled.checked });
-      setAiFeedback(enabled.checked ? 'Key enabled in provider order.' : 'Key paused; it will be skipped.', 'success');
-    } catch (_) {
-      setAiFeedback('Could not update this key. Try again.', 'error');
-    }
-    try {
-      await refresh();
-    } catch (error) {
-      setAiFeedback(error.message || 'Could not reload saved keys.', 'error');
-    }
+    await updateKeyAndRefresh(
+      { enabled: enabled.checked },
+      enabled.checked ? 'Key enabled in provider order.' : 'Key paused; it will be skipped.',
+      () => 'Could not update this key. Try again.'
+    );
   });
 
   test.addEventListener('click', async () => {
