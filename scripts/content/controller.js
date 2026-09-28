@@ -77,7 +77,7 @@ const questionDom = globalThis.UwUKahootAIQuestionDom.create({
   getNonce: () => contentState.submitNonce,
   log
 });
-const { getExpectedChoiceCount, pollForAnswerChoices, pollForImageLabels, pollForJumbleTiles, probeSliderConfigFast } = questionDom;
+const { captureAnswerChoiceSnapshot, getExpectedChoiceCount, pollForAnswerChoices, pollForImageLabels, pollForJumbleTiles, probeSliderConfigFast } = questionDom;
 const { removeTimerOverlay, showTimerOverlay } = globalThis.UwUKahootAIDelayUi.create();
 const answerFeedbackUi = globalThis.UwUKahootAIAnswerFeedbackUi.create({ domAdapter });
 const answerActions = globalThis.UwUKahootAIAnswerActions.create({
@@ -336,6 +336,7 @@ globalThis.UwUKahootAIQuestionPreparation.create({
   updateStatus,
   answerFeedbackUi,
   getExpectedChoiceCount,
+  captureAnswerChoiceSnapshot,
   pollForAnswerChoices,
   pollForJumbleTiles,
   probeSliderConfigFast,

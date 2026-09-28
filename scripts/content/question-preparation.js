@@ -17,6 +17,7 @@
       updateStatus,
       answerFeedbackUi,
       getExpectedChoiceCount,
+      captureAnswerChoiceSnapshot,
       pollForAnswerChoices,
       pollForJumbleTiles,
       probeSliderConfigFast,
@@ -58,8 +59,8 @@
       incomingHash,
       expectedChoiceCount,
       dataChoiceCount,
-      previousQuestionChoices,
-      questionTransition
+      questionTransition,
+      previousDomSnapshot
     }) {
       const requiredChoices = Math.max(2, expectedChoiceCount);
       const retryToken = state.currentQuestionReadiness?.retryToken || createSolveId();
@@ -86,7 +87,7 @@
       let readinessAttempt = 0;
       while (readinessAttempt < MAX_CHOICE_READINESS_ATTEMPTS) {
         readinessAttempt += 1;
-        domChoices = await pollForAnswerChoices(expectedChoiceCount, choiceWaitNonce, q.choices, previousQuestionChoices, questionTransition);
+        domChoices = await pollForAnswerChoices(expectedChoiceCount, choiceWaitNonce, q.choices, questionTransition, previousDomSnapshot);
         if (choiceWaitNonce !== state.submitNonce || state.lastPreparedHash !== incomingHash) {
           log('Discarding answer choices from an outdated question.');
           return false;
@@ -188,12 +189,12 @@
       }
       state.lastPreparedHash = incomingHash;
       const previousQuestion = state.currentQuestion;
-      const previousQuestionChoices = Array.isArray(previousQuestion?.choices) ? [...previousQuestion.choices] : [];
       const questionTransition = !!previousQuestion && (
         q.title !== previousQuestion.title ||
         q.type !== previousQuestion.type ||
         String(q.questionIndex ?? '') !== String(previousQuestion.questionIndex ?? '')
       );
+      const previousDomSnapshot = isChoiceQuestion ? captureAnswerChoiceSnapshot() : [];
       state.currentSolveId = createSolveId();
       cancelActiveRequest();
       state.lastSentHash = null;
@@ -238,8 +239,8 @@
           incomingHash,
           expectedChoiceCount,
           dataChoiceCount,
-          previousQuestionChoices,
-          questionTransition
+          questionTransition,
+          previousDomSnapshot
         });
         if (!choicesReady) return;
       }

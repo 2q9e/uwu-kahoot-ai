@@ -1,8 +1,6 @@
 (function () {
   'use strict';
 
-  const CHOICE_TRANSITION_GRACE_MS = 5000;
-
   function createQuestionDom({ domAdapter, waitForDomResult, getNonce, log }) {
     function getExpectedChoiceCount(type, choices = []) {
       const parsedCount = Array.isArray(choices) ? choices.length : 0;
@@ -10,27 +8,39 @@
       return type === 'true_false' ? 2 : 0;
     }
 
-    async function pollForAnswerChoices(expectedCount = 0, nonce = getNonce(), fallbackChoices = [], previousChoices = [], questionTransition = false) {
+    function captureAnswerChoiceSnapshot() {
+      const findElements = domAdapter.findVisibleAnswerElements || domAdapter.findAnswerElements;
+      return findElements().map(element => ({
+        element,
+        text: domAdapter.cleanButtonText(element),
+        selector: element.getAttribute('data-functional-selector') || '',
+        ariaLabel: element.getAttribute('aria-label') || '',
+        disabled: !!element.disabled || element.hasAttribute('disabled'),
+        ariaDisabled: element.getAttribute('aria-disabled') === 'true'
+      }));
+    }
+
+    async function pollForAnswerChoices(expectedCount = 0, nonce = getNonce(), fallbackChoices = [], questionTransition = false, previousDomSnapshot = []) {
       const requiredCount = Math.max(2, Number(expectedCount) || 0);
-      const transitionStartedAt = Date.now();
       const fallbacks = Array.isArray(fallbackChoices)
         ? fallbackChoices.map(choice => String(choice ?? '').trim())
         : [];
-      const previous = Array.isArray(previousChoices)
-        ? previousChoices.map(choice => String(choice ?? '').trim().toLocaleLowerCase())
-        : [];
       const fallbackIsComplete = fallbacks.length >= requiredCount && fallbacks.every(Boolean);
-      const isPreviousQuestionChoices = choices => {
-        const normalized = choices.map(choice => String(choice ?? '').trim().toLocaleLowerCase());
-        const previousSet = new Set(previous);
-        const overlapsPreviousChoices = previous.length > 1 && normalized.some(choice => previousSet.has(choice));
-        if (!overlapsPreviousChoices) return false;
-        // Kahoot can leave the last answer buttons mounted while the new
-        // question intro is showing or update the buttons in stages. Allow
-        // overlapping choices once the new question's choices have had time
-        // to appear.
-        return !questionTransition || Date.now() - transitionStartedAt < CHOICE_TRANSITION_GRACE_MS;
+      const answerChoiceDomChanged = () => {
+        if (!questionTransition || !previousDomSnapshot.length) return true;
+        const current = captureAnswerChoiceSnapshot();
+        if (current.length !== previousDomSnapshot.length) return true;
+        return current.some((choice, index) => {
+          const previousChoice = previousDomSnapshot[index];
+          return choice.element !== previousChoice.element ||
+            choice.text !== previousChoice.text ||
+            choice.selector !== previousChoice.selector ||
+            choice.ariaLabel !== previousChoice.ariaLabel ||
+            choice.disabled !== previousChoice.disabled ||
+            choice.ariaDisabled !== previousChoice.ariaDisabled;
+        });
       };
+      const hasStaleAnswerControls = () => questionTransition && previousDomSnapshot.length > 0 && !answerChoiceDomChanged();
 
       const readChoices = () => {
         const findElements = domAdapter.findAnswerElements || domAdapter.findVisibleAnswerElements;
@@ -51,7 +61,7 @@
         const readExpandedChoices = () => {
           const choices = readChoices();
           if (!choices || choices.length <= fallbacks.length) return null;
-          return isPreviousQuestionChoices(choices) ? null : choices;
+          return hasStaleAnswerControls() ? null : choices;
         };
         const expandedChoices = await waitForDomResult(readExpandedChoices, {
           timeout: 900,
@@ -66,24 +76,14 @@
         return fallbacks;
       }
 
-      const settleMs = questionTransition ? 650 : Number(expectedCount) > 0 ? 240 : 500;
-      let choices = await waitForDomResult(() => {
+      const choices = await waitForDomResult(() => {
         const current = readChoices();
-        return current && !isPreviousQuestionChoices(current) ? current : null;
+        return current && !hasStaleAnswerControls() ? current : null;
       }, {
-        timeout: questionTransition ? CHOICE_TRANSITION_GRACE_MS + settleMs + 1000 : 4500,
+        timeout: 4500,
         nonce,
-        settleMs
+        settleMs: questionTransition ? 650 : Number(expectedCount) > 0 ? 240 : 500
       });
-      if (!choices && questionTransition) {
-        // The DOM waiter is mutation-driven, so re-read after the grace period
-        // to accept a new question that legitimately repeats all old choices.
-        choices = await waitForDomResult(readChoices, {
-          timeout: settleMs + 250,
-          nonce,
-          settleMs
-        });
-      }
       if (choices) log(`Answer choices read from page: ${choices.length}`);
       return choices || [];
     }
@@ -171,7 +171,7 @@
       return elements;
     }
 
-    return { getExpectedChoiceCount, pollForAnswerChoices, pollForImageLabels, pollForJumbleTextEls, pollForJumbleTiles, probeSliderConfigFast };
+    return { captureAnswerChoiceSnapshot, getExpectedChoiceCount, pollForAnswerChoices, pollForImageLabels, pollForJumbleTextEls, pollForJumbleTiles, probeSliderConfigFast };
   }
 
   globalThis.UwUKahootAIQuestionDom = { create: createQuestionDom };
