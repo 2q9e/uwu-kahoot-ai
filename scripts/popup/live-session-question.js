@@ -46,6 +46,13 @@ export function createLiveSessionQuestion({
     answerHandoff.classList.remove('hidden');
   }
 
+  function clearAnswerHandoff() {
+    if (!answerHandoff) return;
+    answerHandoff.textContent = '';
+    answerHandoff.classList.add('hidden');
+    answerHandoff.removeAttribute('data-stage');
+  }
+
   function showReadiness(readiness) {
     if (!questionReadiness) return;
     if (!readiness?.choicesRequired) {
@@ -141,8 +148,7 @@ export function createLiveSessionQuestion({
     liveEmpty?.classList.remove('hidden');
     liveQuestion?.classList.add('hidden');
     questionReadiness?.classList.add('hidden');
-    answerHandoff?.classList.add('hidden');
-    answerHandoff?.removeAttribute('data-stage');
+    clearAnswerHandoff();
     if (questionText) questionText.textContent = '';
     if (answerText) {
       answerText.textContent = 'Waiting for a response';
@@ -222,6 +228,7 @@ export function createLiveSessionQuestion({
     tabSession.renderTabs();
     if (request.action === 'resetLiveState') {
       hasCurrentQuestion = false;
+      clearAnswerHandoff();
       liveQuestion?.classList.add('hidden');
       liveEmpty?.classList.remove('hidden');
       if (questionText) questionText.textContent = '';
@@ -232,6 +239,7 @@ export function createLiveSessionQuestion({
       setLiveStatus('idle', 'Waiting for a question', request.status || '');
     }
     if (request.action === 'updateQuestion' && request.question) {
+      clearAnswerHandoff();
       showQuestion(request.question.title, request.question.type, request.readiness);
       if (request.state === 'waiting_for_choices') setWaitingForChoices(request.readiness);
       else setThinking();
