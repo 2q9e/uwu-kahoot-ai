@@ -230,10 +230,18 @@
             <p id="primaryModelHelp" class="setting-note model-field-help">Choose a catalog model below or enter a provider model ID. This model handles normal text questions.</p>
           </div>
           <div class="model-col">
-            <label class="field-label" for="aiVisionModel">Image-question model</label>
+            <div class="vision-model-picker-heading">
+              <label class="field-label" for="visionModelPicker">Choose an image-capable model</label>
+              <button id="refreshVisionModels" class="catalog-action secondary" type="button">Find image models</button>
+            </div>
+            <select id="visionModelPicker" class="field-select" aria-label="Choose an image-capable model">
+              <option value="" selected disabled>Loading image-capable models…</option>
+            </select>
+            <p id="visionPickerHelp" class="setting-note model-field-help" role="status" aria-live="polite">Find models supported by your selected provider key. Only models marked for image input appear here.</p>
+            <label class="field-label" for="aiVisionModel">Or enter a model ID</label>
             <input id="aiVisionModel" class="field-input" type="text" list="visionModelOptions" aria-label="Image-question model ID" autocomplete="off">
             <datalist id="visionModelOptions"></datalist>
-            <p id="visionModelHelp" class="setting-note model-field-help">Used when a quiz question includes an image. Pick a catalog model marked “Image input”.</p>
+            <p id="visionModelHelp" class="setting-note model-field-help">This model handles questions that include an image.</p>
           </div>
         </div>
         <div class="reasoning-row">

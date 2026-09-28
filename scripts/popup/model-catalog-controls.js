@@ -27,7 +27,7 @@ export function createModelCatalogControls({
   } = elements;
 
   function wireModelControls() {
-    refreshModelsBtn?.addEventListener('click', providerCatalog.refreshProviderCatalog);
+    refreshModelsBtn?.addEventListener('click', () => providerCatalog.refreshProviderCatalog());
     modelSearchInput?.addEventListener('input', modelRenderer.handleSearch);
     modelCapabilityFilter?.addEventListener('change', modelRenderer.handleSearch);
     showMoreModelsBtn?.addEventListener('click', modelRenderer.showMoreModels);

@@ -297,6 +297,11 @@ body.api-page .add-api-key summary { font-size: 12px; }
 body.api-page .model-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 body.api-page .model-col { min-width: 0; }
 body.api-page .model-row .field-input { min-height: 40px; }
+body.api-page #visionModelPicker { min-height: 42px; font-size: 12px; }
+body.api-page .vision-model-picker-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+body.api-page .vision-model-picker-heading .field-label { margin-top: 10px; }
+body.api-page #refreshVisionModels { min-height: 32px; padding: 5px 9px; font-size: 11px; white-space: nowrap; }
+body.api-page #visionPickerHelp { margin-top: 5px; }
 body.api-page .model-selection-summary { padding: 16px; }
 body.api-page .model-selection-summary-grid p > strong { font-size: 11px; }
 body.api-page .model-selection-summary-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -348,6 +353,7 @@ body.api-page .footer { display: none; }
   body.api-page .api-page-nav { top: 5px; gap: 5px; margin-top: 0; }
   body.api-page .api-page-nav a { min-height: 38px; padding-inline: 10px; font-size: 11px; }
   body.api-page .model-row { grid-template-columns: 1fr; gap: 2px; }
+  body.api-page .vision-model-picker-heading { align-items: flex-end; }
   body.api-page .backup-slots { grid-template-columns: 1fr; }
   body.api-page .backup-slots label:last-child:nth-child(odd) { grid-column: auto; }
   body.api-page .model-selection-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

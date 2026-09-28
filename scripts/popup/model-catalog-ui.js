@@ -21,6 +21,9 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
   const fastBinaryModelHelp = document.getElementById('fastBinaryModelHelp');
   const textModelOptions = document.getElementById('textModelOptions');
   const visionModelOptions = document.getElementById('visionModelOptions');
+  const visionModelPicker = document.getElementById('visionModelPicker');
+  const refreshVisionModelsButton = document.getElementById('refreshVisionModels');
+  const visionPickerHelp = document.getElementById('visionPickerHelp');
   const modelCapabilityFilter = document.getElementById('modelCapabilityFilter');
   const useProviderDefaultsButton = document.getElementById('useProviderDefaults');
   const useFastestModelButton = document.getElementById('useFastestModel');
@@ -44,6 +47,7 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
   const apiKeySummary = document.getElementById('apiKeySummary');
   const localConfigKeys = document.getElementById('localConfigKeys');
   const testEnabledKeysButton = document.getElementById('testEnabledApiKeys');
+  const CUSTOM_VISION_MODEL = '__custom_vision_model__';
   const providerFormPanels = ['apiKeysPanel', 'modelSettingsPanel', 'fastBinaryPanel', 'backupModelsPanel', 'modelCatalogPanel']
     .map(id => document.getElementById(id))
     .filter(Boolean);
@@ -124,6 +128,70 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
     };
     fill(textModelOptions, models.filter(model => model?.id && model.supportsAnswers !== false));
     fill(visionModelOptions, models.filter(model => model?.id && model.supportsVision));
+    updateVisionModelPicker(models);
+  }
+
+  function updateVisionModelPicker(models) {
+    if (!visionModelPicker) return;
+    const provider = getCurrentProvider();
+    const config = providers[provider] || providers[defaultProvider];
+    const current = String(visionInput?.value || '').trim() || config.defaultVision;
+    const visionModels = models.filter(model => model?.id && model.supportsVision && model.supportsAnswers !== false);
+    const currentModel = visionModels.find(model => model.id === current);
+    const defaultModel = visionModels.find(model => model.id === config.defaultVision);
+    const remainingModels = visionModels
+      .filter(model => model.id !== current && model.id !== config.defaultVision)
+      .sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id)) || a.id.localeCompare(b.id));
+    const fragment = document.createDocumentFragment();
+    const firstOption = document.createElement('option');
+    firstOption.value = '';
+    firstOption.textContent = visionModels.length ? 'Choose an image model…' : 'Find image models to browse';
+    firstOption.disabled = true;
+    fragment.append(firstOption);
+
+    if (current && !currentModel) {
+      const option = document.createElement('option');
+      option.value = CUSTOM_VISION_MODEL;
+      option.textContent = `Current model ID · ${current}`;
+      fragment.append(option);
+    }
+
+    const choices = [
+      ...(currentModel ? [{ ...currentModel, pickerPrefix: 'Current' }] : []),
+      ...(defaultModel && defaultModel.id !== current ? [{ ...defaultModel, pickerPrefix: 'Provider default' }] : []),
+      ...remainingModels
+    ];
+    for (const model of choices) {
+      const option = document.createElement('option');
+      option.value = model.id;
+      const displayName = model.name && model.name !== model.id ? `${model.name} · ${model.id}` : model.id;
+      option.textContent = model.pickerPrefix ? `${model.pickerPrefix} · ${displayName}` : displayName;
+      fragment.append(option);
+    }
+    visionModelPicker.replaceChildren(fragment);
+    visionModelPicker.value = currentModel ? currentModel.id : current ? CUSTOM_VISION_MODEL : '';
+    if (visionPickerHelp) {
+      visionPickerHelp.textContent = visionModels.length
+        ? `${visionModels.length} image-capable model${visionModels.length === 1 ? '' : 's'} found for ${provider}. Choosing one fills the model ID below.`
+        : 'No image models are loaded yet. Find image models to load this provider’s catalog; you can also enter a model ID below.';
+    }
+  }
+
+  function syncVisionModelPicker() {
+    if (!visionModelPicker) return;
+    const current = String(visionInput?.value || '').trim();
+    const available = Array.from(visionModelPicker.options).some(option => option.value === current);
+    if (available) {
+      visionModelPicker.value = current;
+      return;
+    }
+    const custom = Array.from(visionModelPicker.options).find(option => option.value === CUSTOM_VISION_MODEL);
+    if (current && custom) {
+      custom.textContent = `Current model ID · ${current}`;
+      visionModelPicker.value = CUSTOM_VISION_MODEL;
+      return;
+    }
+    updateVisionModelPicker(providerCatalog?.getModels(getCurrentProvider()) || []);
   }
   function modelDisplayName(id, models) {
     const model = models.find(item => item.id === id);
@@ -136,6 +204,7 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
     const models = providerCatalog?.getModels(provider) || [];
     const model = modelInput?.value.trim() || config.defaultModel;
     const vision = visionInput?.value.trim() || config.defaultVision;
+    syncVisionModelPicker();
     const effort = normalizeReasoningEffort(reasoningSelect?.value);
     if (modelSelectionText) modelSelectionText.textContent = modelDisplayName(model, models);
     if (modelSelectionVision) modelSelectionVision.textContent = modelDisplayName(vision, models);
@@ -247,6 +316,42 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
       populateFastModelOptions(provider, models, fastBinaryModelSelect?.value ?? savedFastModel);
     }
   });
+
+  refreshVisionModelsButton?.addEventListener('click', async () => {
+    const provider = getCurrentProvider();
+    const originalText = refreshVisionModelsButton.textContent;
+    refreshVisionModelsButton.disabled = true;
+    refreshVisionModelsButton.textContent = 'Loading…';
+    if (visionPickerHelp) visionPickerHelp.textContent = `Checking ${provider} for image-capable models…`;
+    try {
+      await providerCatalog.refreshProviderCatalog(refreshVisionModelsButton);
+      if (provider === getCurrentProvider()) {
+        const models = providerCatalog.getModels(provider);
+        if (!models.some(model => model.supportsVision && model.supportsAnswers !== false) && visionPickerHelp) {
+          visionPickerHelp.textContent = models.length
+            ? `No image-capable models were listed for ${provider}. You can enter a model ID below or try another provider.`
+            : 'No models loaded. Check that a provider API key is saved, then try again. The model catalog has the full error details.';
+        }
+      }
+    } catch (_) {
+      if (provider === getCurrentProvider() && visionPickerHelp) {
+        visionPickerHelp.textContent = 'Could not load image models. Check the model catalog status below and try again.';
+      }
+    } finally {
+      refreshVisionModelsButton.disabled = false;
+      refreshVisionModelsButton.textContent = originalText;
+    }
+  });
+  visionModelPicker?.addEventListener('change', () => {
+    const selectedModel = visionModelPicker.value;
+    if (!selectedModel || selectedModel === CUSTOM_VISION_MODEL || !visionInput) return;
+    visionInput.value = selectedModel;
+    refreshSelectionSummary();
+    modelRenderer.renderModelCatalog();
+    const model = providerCatalog.getModels(getCurrentProvider()).find(item => item.id === selectedModel);
+    setAiFeedback(`Selected ${model?.name || selectedModel} for image questions. Save model settings to apply it.`, '');
+  });
+  visionInput?.addEventListener('input', syncVisionModelPicker);
 
   const loadProviderFields = createProviderFieldsLoader({
     getCurrentProvider,

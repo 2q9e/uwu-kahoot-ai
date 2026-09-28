@@ -134,12 +134,22 @@ export function createProviderModelCatalog({
     setCatalogStatus('No catalog loaded yet.');
   }
 
-  async function refreshProviderCatalog() {
-    if (!refreshModelsBtn) return;
+  let catalogRefreshPromise = null;
+
+  function refreshProviderCatalog(triggerButton = refreshModelsBtn) {
+    if (!triggerButton) return Promise.resolve(false);
+    if (catalogRefreshPromise) return catalogRefreshPromise;
+    catalogRefreshPromise = refreshProviderCatalogNow(triggerButton)
+      .finally(() => { catalogRefreshPromise = null; });
+    return catalogRefreshPromise;
+  }
+
+  async function refreshProviderCatalogNow(triggerButton) {
     const provider = getCurrentProvider();
     resetVisibleModelLimit();
-    refreshModelsBtn.disabled = true;
-    refreshModelsBtn.textContent = 'Loading…';
+    const originalButtonText = triggerButton.textContent;
+    triggerButton.disabled = true;
+    triggerButton.textContent = 'Loading…';
     setCatalogStatus('Contacting provider model catalog…', 'loading');
     if (catalogHelp) catalogHelp.textContent = provider === 'openrouter'
       ? `Only $0 input and output models are listed. Throughput is the best free endpoint’s provider-reported 30-minute p50, not a live generation check.`
@@ -176,14 +186,16 @@ export function createProviderModelCatalog({
       const cacheKey = `${CATALOG_STORAGE_PREFIX}${provider}`;
       await chrome.storage.local.set({ [cacheKey]: { fetchedAt: new Date().toISOString(), models } });
       if (provider === getCurrentProvider()) await renderProviderQuota(provider, key);
+      return true;
     } catch (error) {
       if (provider === getCurrentProvider()) {
         setCatalogStatus(error.message || 'Could not load models.', 'error');
         await renderProviderQuota(provider);
       }
+      return false;
     } finally {
-      refreshModelsBtn.disabled = false;
-      refreshModelsBtn.textContent = 'Refresh';
+      triggerButton.disabled = false;
+      triggerButton.textContent = originalButtonText;
     }
   }
 
