@@ -87,14 +87,14 @@ export function createModelCatalogRenderer({
     if (model.provider === 'openai' && model.supportsAnswers !== false) {
       const measure = createAction('Measure speed');
       measure.title = 'Runs three short streaming generations and reports median TPS plus first-token time using token-level stream data. Models without that data cannot be measured. Usage charges may apply.';
-      measure.addEventListener('click', () => measureOpenAISpeed(model, allModels, measure));
+      measure.addEventListener('click', () => measureOpenAISpeed(model, measure));
       actions.append(measure);
     }
 
     if (model.provider === 'openrouter') {
       const measure = createAction(model.speed ? 'Refresh TPS' : 'Check TPS');
       measure.title = 'Reads the best free endpoint’s provider-reported 30-minute p50 throughput; it does not generate a response.';
-      measure.addEventListener('click', () => measureOpenRouterSpeed(model, allModels, measure));
+      measure.addEventListener('click', () => measureOpenRouterSpeed(model, measure));
       actions.append(measure);
     }
   }
@@ -137,7 +137,7 @@ export function createModelCatalogRenderer({
     }
   }
 
-  async function measureOpenRouterSpeed(model, allModels, button) {
+  async function measureOpenRouterSpeed(model, button) {
     const key = await getCurrentProviderKey('openrouter');
     if (!key) {
       setAiFeedback('Enter or save your OpenRouter key before checking throughput.', 'error');
@@ -146,7 +146,17 @@ export function createModelCatalogRenderer({
     button.disabled = true;
     button.textContent = 'Checking…';
     try {
-      const updated = await enrichOpenRouterThroughput(allModels, key, () => {}, { modelIds: [model.id], limit: 1, force: true });
+      const measuredModels = await enrichOpenRouterThroughput([model], key, () => {}, { modelIds: [model.id], limit: 1, force: true });
+      const measurement = measuredModels.find(item => item.id === model.id);
+      const updated = getModels('openrouter').map(item => item.id === model.id ? {
+        ...item,
+        speed: measurement?.speed ?? null,
+        latency: measurement?.latency ?? null,
+        speedProvider: measurement?.speedProvider || '',
+        uptime: measurement?.uptime ?? null,
+        speedUpdatedAt: measurement?.speedUpdatedAt || '',
+        speedSource: measurement?.speedSource || ''
+      } : item);
       setModels('openrouter', updated);
       onModelsUpdated('openrouter', updated);
       try {
@@ -154,8 +164,7 @@ export function createModelCatalogRenderer({
           [`${catalogPrefix}openrouter`]: { fetchedAt: new Date().toISOString(), models: updated }
         });
       } catch (_) {  }
-      const measured = updated.find(item => item.id === model.id);
-      setAiFeedback(measured?.speed ? `${model.name}: ${Math.round(measured.speed)} output tok/s p50 from ${measured.speedProvider || 'a free endpoint'}.` : `No current free-endpoint throughput reading is available for ${model.name}.`, measured?.speed ? 'success' : '');
+      setAiFeedback(measurement?.speed ? `${model.name}: ${Math.round(measurement.speed)} output tok/s p50 from ${measurement.speedProvider || 'a free endpoint'}.` : `No current free-endpoint throughput reading is available for ${model.name}.`, measurement?.speed ? 'success' : '');
       renderModelCatalog();
     } catch (error) {
       setAiFeedback(error.message || 'Could not check free-endpoint throughput.', 'error');
@@ -164,7 +173,7 @@ export function createModelCatalogRenderer({
     }
   }
 
-  async function measureOpenAISpeed(model, allModels, button) {
+  async function measureOpenAISpeed(model, button) {
     const key = await getCurrentProviderKey('openai');
     if (!key) {
       setAiFeedback('Enter or save an OpenAI key before measuring speed.', 'error');
@@ -191,22 +200,19 @@ export function createModelCatalogRenderer({
         outputTokenCountSource: result.outputTokenCountSource,
         speedOutputTokens: result.outputTokens
       };
-      const updated = allModels.map(item => item.id === model.id ? {
-        ...item,
-        ...speedRecord
-      } : item);
+      let speedCache = {};
+      try {
+        speedCache = (await chrome.storage.local.get(OPENAI_SPEED_STORAGE_KEY))[OPENAI_SPEED_STORAGE_KEY] || {};
+      } catch (_) {  }
+      const updated = getModels('openai').map(item => item.id === model.id ? { ...item, ...speedRecord } : item);
       setModels('openai', updated);
       onModelsUpdated('openai', updated);
+      const nextSpeedCache = { ...speedCache, [model.id]: speedRecord };
+      const recentSpeeds = Object.entries(nextSpeedCache)
+        .sort((a, b) => Date.parse(b[1]?.speedUpdatedAt || '') - Date.parse(a[1]?.speedUpdatedAt || ''))
+        .slice(0, 200);
       try {
-        const speedCache = (await chrome.storage.local.get(OPENAI_SPEED_STORAGE_KEY))[OPENAI_SPEED_STORAGE_KEY] || {};
-        const nextSpeedCache = { ...speedCache, [model.id]: speedRecord };
-        const recentSpeeds = Object.entries(nextSpeedCache)
-          .sort((a, b) => Date.parse(b[1]?.speedUpdatedAt || '') - Date.parse(a[1]?.speedUpdatedAt || ''))
-          .slice(0, 200);
-        await chrome.storage.local.set({
-          [`${catalogPrefix}openai`]: { fetchedAt: new Date().toISOString(), models: updated },
-          [OPENAI_SPEED_STORAGE_KEY]: Object.fromEntries(recentSpeeds)
-        });
+        await chrome.storage.local.set({ [OPENAI_SPEED_STORAGE_KEY]: Object.fromEntries(recentSpeeds) });
       } catch (_) {  }
       setAiFeedback(`${model.name}: median streamed TPS ${result.tokensPerSecond} visible text tok/s across ${result.sampleCount} runs · median first token ${result.firstTokenMs} ms. OpenAI usage charges may apply.`, 'success');
       renderModelCatalog();
