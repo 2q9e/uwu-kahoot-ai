@@ -160,7 +160,8 @@ function questionHash(q) {
     t: q.title,
     c: q.choices || [],
     type: q.type || '',
-    index: q.questionIndex ?? null
+    index: q.questionIndex ?? null,
+    sliderConfig: q.sliderConfig || null
   });
 }
 
