@@ -194,17 +194,7 @@ async function answerMultiSelectWithVision(title, choices, imageUrl, apiKey, vis
     log(`Vision multi-select parsed ${result.length} answer(s).`);
     return result;
   } catch (parseErr) {
-    const numbers = [...new Set(
-      [...raw.matchAll(/\b(\d+)\b/g)]
-        .map(m => parseInt(m[1], 10))
-        .filter(n => n >= 1 && n <= choices.length)
-    )];
-    if (numbers.length > 0) {
-      const answers = numbers.map(n => choices[n - 1]);
-      log(`Vision multi-select number fallback found ${answers.length} answer(s).`);
-      return answers;
-    }
     warn(`Vision multi-select parse failed: ${parseErr.message}`);
-    return [resolveBestChoice(raw, choices)];
+    throw parseErr;
   }
 }
