@@ -23,17 +23,17 @@
       const isPreviousQuestionChoices = choices => {
         const normalized = choices.map(choice => String(choice ?? '').trim().toLocaleLowerCase());
         const previousSet = new Set(previous);
-        const onlyOldChoices = previous.length > 1 && normalized.length > 1 &&
-          normalized.every(choice => previousSet.has(choice));
-        if (!onlyOldChoices) return false;
+        const overlapsPreviousChoices = previous.length > 1 && normalized.some(choice => previousSet.has(choice));
+        if (!overlapsPreviousChoices) return false;
         // Kahoot can leave the last answer buttons mounted while the new
-        // question intro is showing. Allow a repeated set once its choices
-        // have had time to appear for the new question.
+        // question intro is showing or update the buttons in stages. Allow
+        // overlapping choices once the new question's choices have had time
+        // to appear.
         return !questionTransition || Date.now() - transitionStartedAt < CHOICE_TRANSITION_GRACE_MS;
       };
 
       const readChoices = () => {
-        const findElements = domAdapter.findVisibleAnswerElements || domAdapter.findAnswerElements;
+        const findElements = domAdapter.findAnswerElements || domAdapter.findVisibleAnswerElements;
         const elements = findElements();
         if (elements.length < requiredCount) return null;
         const choices = elements.map(element => domAdapter.cleanButtonText(element));
@@ -66,7 +66,7 @@
         return fallbacks;
       }
 
-      const settleMs = Number(expectedCount) > 0 ? 240 : 500;
+      const settleMs = questionTransition ? 650 : Number(expectedCount) > 0 ? 240 : 500;
       let choices = await waitForDomResult(() => {
         const current = readChoices();
         return current && !isPreviousQuestionChoices(current) ? current : null;
