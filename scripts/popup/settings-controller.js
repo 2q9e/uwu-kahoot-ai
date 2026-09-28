@@ -165,6 +165,15 @@ export function createPopupSettingsController() {
     return modelCatalog.loadProviderFields(provider);
   }
 
+  function handleSettingsLoadFailure() {
+    reportStorageFailure('settings');
+    apiSettingsState = 'unavailable';
+    updateApiStatus();
+    modelCatalog.setProviderFieldsLoading(false);
+    retrySettingsLoadBtn?.classList.remove('hidden');
+    setAiFeedback('Provider settings could not be loaded. Check extension storage, then retry.', 'error');
+  }
+
   function setAiFeedback(message, state = '') {
     if (!aiFeedback) return;
     aiFeedback.textContent = message;
@@ -185,12 +194,7 @@ export function createPopupSettingsController() {
       retrySettingsLoadBtn?.classList.add('hidden');
       return hasKey;
     } catch (_) {
-      reportStorageFailure('settings');
-      apiSettingsState = 'unavailable';
-      updateApiStatus();
-      modelCatalog.setProviderFieldsLoading(false);
-      retrySettingsLoadBtn?.classList.remove('hidden');
-      setAiFeedback('Provider settings could not be loaded. Check extension storage, then retry.', 'error');
+      handleSettingsLoadFailure();
       return false;
     }
   }
@@ -229,11 +233,7 @@ export function createPopupSettingsController() {
         retrySettingsLoadBtn.classList.add('hidden');
         if (!providerKeyLoadErrors.has(currentProvider)) setAiFeedback('Settings loaded.', 'success');
       } catch (_) {
-        reportStorageFailure('settings');
-        apiSettingsState = 'unavailable';
-        updateApiStatus();
-        modelCatalog.setProviderFieldsLoading(false);
-        setAiFeedback('Provider settings could not be loaded. Check extension storage, then retry.', 'error');
+        handleSettingsLoadFailure();
       } finally {
         retrySettingsLoadBtn.disabled = false;
         retrySettingsLoadBtn.textContent = 'Retry settings';
