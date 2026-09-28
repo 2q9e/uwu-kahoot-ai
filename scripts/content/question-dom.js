@@ -1,6 +1,8 @@
 (function () {
   'use strict';
 
+  const CHOICE_TRANSITION_GRACE_MS = 5000;
+
   function createQuestionDom({ domAdapter, waitForDomResult, getNonce, log }) {
     function getExpectedChoiceCount(type, choices = []) {
       const parsedCount = Array.isArray(choices) ? choices.length : 0;
@@ -10,6 +12,7 @@
 
     async function pollForAnswerChoices(expectedCount = 0, nonce = getNonce(), fallbackChoices = [], previousChoices = [], questionTransition = false) {
       const requiredCount = Math.max(2, Number(expectedCount) || 0);
+      const transitionStartedAt = Date.now();
       const fallbacks = Array.isArray(fallbackChoices)
         ? fallbackChoices.map(choice => String(choice ?? '').trim())
         : [];
@@ -18,10 +21,15 @@
         : [];
       const fallbackIsComplete = fallbacks.length >= requiredCount && fallbacks.every(Boolean);
       const isPreviousQuestionChoices = choices => {
-        if (questionTransition) return false;
         const normalized = choices.map(choice => String(choice ?? '').trim().toLocaleLowerCase());
-        return previous.length > 1 && previous.length === normalized.length &&
-          previous.every((choice, index) => choice === normalized[index]);
+        const previousSet = new Set(previous);
+        const onlyOldChoices = previous.length > 1 && normalized.length > 1 &&
+          normalized.every(choice => previousSet.has(choice));
+        if (!onlyOldChoices) return false;
+        // Kahoot can leave the last answer buttons mounted while the new
+        // question intro is showing. Allow a repeated set once its choices
+        // have had time to appear for the new question.
+        return !questionTransition || Date.now() - transitionStartedAt < CHOICE_TRANSITION_GRACE_MS;
       };
 
       const readChoices = () => {
@@ -58,14 +66,24 @@
         return fallbacks;
       }
 
-      const choices = await waitForDomResult(() => {
+      const settleMs = Number(expectedCount) > 0 ? 240 : 500;
+      let choices = await waitForDomResult(() => {
         const current = readChoices();
         return current && !isPreviousQuestionChoices(current) ? current : null;
       }, {
-        timeout: 4500,
+        timeout: questionTransition ? CHOICE_TRANSITION_GRACE_MS + settleMs + 1000 : 4500,
         nonce,
-        settleMs: Number(expectedCount) > 0 ? 240 : 500
+        settleMs
       });
+      if (!choices && questionTransition) {
+        // The DOM waiter is mutation-driven, so re-read after the grace period
+        // to accept a new question that legitimately repeats all old choices.
+        choices = await waitForDomResult(readChoices, {
+          timeout: settleMs + 250,
+          nonce,
+          settleMs
+        });
+      }
       if (choices) log(`Answer choices read from page: ${choices.length}`);
       return choices || [];
     }
