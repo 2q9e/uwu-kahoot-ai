@@ -11,6 +11,7 @@ const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
 const scrollLinkedAnimations = typeof CSS !== 'undefined' &&
   CSS.supports?.('animation-timeline: scroll(root block)');
 let scrollProgressFrame = 0;
+let statsRevision = 0;
 
 const TYPE_LABELS = {
   quiz: 'Multiple choice', true_false: 'True / false', multiple_select_quiz: 'Multi-select',
@@ -117,10 +118,13 @@ function renderStats(stats) {
 }
 
 async function loadStats() {
+  const revision = statsRevision;
   try {
     const stored = await chrome.storage.local.get(STORAGE_KEY);
+    if (revision !== statsRevision) return;
     renderStats(stored[STORAGE_KEY]);
   } catch (_) {
+    if (revision !== statsRevision) return;
     renderUnavailable();
   }
 }
@@ -160,7 +164,9 @@ if (!motionPreference.matches) {
 }
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === 'local' && changes[STORAGE_KEY]) renderStats(changes[STORAGE_KEY].newValue);
+  if (areaName !== 'local' || !changes[STORAGE_KEY]) return;
+  statsRevision += 1;
+  renderStats(changes[STORAGE_KEY].newValue);
 });
 
 loadStats();
