@@ -47,6 +47,7 @@
         "scripts/content/answer-text-slider-actions.js",
         "scripts/content/answer-actions.js",
         "scripts/content/status-ui.js",
+        "scripts/content/question-preparation.js",
         "scripts/content/controller.js"
       ],
       "run_at": "document_start",
