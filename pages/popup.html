@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>UwU Kahoot AI</title>
+  <link rel="stylesheet" href="../styles/popup/base.css">
+  <link rel="stylesheet" href="../styles/popup/components.css">
+  <link rel="stylesheet" href="../styles/popup/provider-settings.css">
+  <link rel="stylesheet" href="../styles/popup/motion.css">
+  <link rel="stylesheet" href="../styles/popup/dashboard-layout.css">
+  <link rel="stylesheet" href="../styles/popup/api-dashboard.css">
+</head>
+<body class="popup-container">
+  <div class="popup-scroll">
+
+    <header class="header">
+      <div class="header-left">
+        <img class="brand-mark" src="../icons/icon48.png" alt="" aria-hidden="true">
+        <div>
+          <h1 class="title">UwU Kahoot AI</h1>
+          <span class="version" id="versionLabel">Extension</span>
+        </div>
+      </div>
+      <div id="apiStatus" class="api-pill checking" role="status" aria-busy="true">Checking keys…</div>
+    </header>
+
+    <div class="dashboard-launch-row">
+      <button id="openDashboard" class="dashboard-launch" type="button">Open dashboard <span aria-hidden="true">↗</span></button>
+      <button id="openApiDashboard" class="dashboard-launch api-launch" type="button">API settings <span aria-hidden="true">↗</span></button>
+      <button id="openStats" class="dashboard-launch stats-launch" type="button">Stats <span aria-hidden="true">↗</span></button>
+    </div>
+
+    <section id="apiPageIntro" class="api-page-intro hidden" aria-labelledby="apiPageTitle">
+      <div>
+        <span class="section-kicker">Provider workspace</span>
+        <h2 id="apiPageTitle">API control room</h2>
+        <p>Manage provider keys, model speed, and fallback behavior in one place.</p>
+      </div>
+      <nav class="api-page-nav" aria-label="API settings sections">
+        <a href="#providerPanel">Provider</a>
+        <a href="#apiKeysPanel">Keys</a>
+        <a href="#modelSettingsPanel">Models</a>
+        <a href="#fastBinaryPanel">Speed</a>
+        <a href="#modelCatalogPanel">Catalog</a>
+        <a class="api-page-exit" href="dashboard.html">Workspace ↗</a>
+        <a class="api-page-exit" href="stats.html">Stats ↗</a>
+      </nav>
+    </section>
+
+    <main>
+    <section class="kahoot-attachment" aria-label="Kahoot tab connection">
+      <div class="kahoot-attachment-heading">
+        <label for="kahootTabSelect">Attached Kahoot tab</label>
+        <span id="kahootTabCount" class="kahoot-tab-count" role="status" aria-live="polite">Scanning tabs…</span>
+      </div>
+      <div class="kahoot-tab-controls">
+        <select id="kahootTabSelect" class="field-select" aria-label="Choose a Kahoot tab">
+          <option value="">Searching for Kahoot tabs…</option>
+        </select>
+        <button id="focusKahootTab" class="btn-tab-action" type="button" disabled>Focus</button>
+        <button id="reloadKahootTab" class="btn-tab-action hidden" type="button" disabled>Reload</button>
+      </div>
+      <p id="kahootAttachStatus" class="kahoot-attach-status" role="status" aria-live="polite">Looking for open Kahoot tabs in all windows.</p>
+    </section>
+
+    <section id="liveSection" class="live-card" aria-label="Live quiz status">
+      <div class="live-header">
+        <div class="live-heading">
+          <span class="section-kicker">Live session</span>
+          <div id="liveStatus" class="live-status" role="status" aria-live="polite">Checking this tab…</div>
+        </div>
+        <button id="retryAnswer" class="btn-retry" type="button" disabled title="Answer the current question again">Try again</button>
+      </div>
+      <p id="liveDetail" class="live-detail">Open a Kahoot game to see activity here.</p>
+      <div id="liveEmpty" class="live-empty">No question detected yet.</div>
+      <div id="liveQuestion" class="live-question hidden">
+      <div class="live-row">
+        <div class="live-label">Q</div>
+        <div id="questionText" class="live-q"></div>
+      </div>
+      <div class="live-divider"></div>
+      <div class="live-row">
+        <div class="live-label live-label-a">A</div>
+        <div id="answerText" class="live-a">Waiting for a response</div>
+      </div>
+      </div>
+    </section>
+
+    <section class="stats-teaser" aria-label="Solve statistics" aria-busy="true">
+      <div><span class="section-kicker">Answer activity</span><strong id="popupSolvedCount">Loading…</strong><small id="popupAverageTime">Average AI response: Loading…</small></div>
+      <button id="openStatsCard" class="text-link" type="button">View stats <span aria-hidden="true">↗</span></button>
+    </section>
+
+    <section class="section" aria-labelledby="controlsHeading">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">Behavior</span>
+          <h2 class="section-title" id="controlsHeading">Answer controls</h2>
+        </div>
+      </div>
+      <div class="toggle-row"><label for="highlight">Highlight answers</label><label class="toggle"><input type="checkbox" id="highlight" checked><span class="toggle-track"></span></label></div>
+      <div class="toggle-row"><label for="autoclick">Auto-click answers</label><label class="toggle"><input type="checkbox" id="autoclick" checked><span class="toggle-track"></span></label></div>
+      <div class="subsection-divider"></div>
+      <div class="toggle-row"><label for="pinHighlight">Pin: show suggested point</label><label class="toggle"><input type="checkbox" id="pinHighlight" checked><span class="toggle-track"></span></label></div>
+      <div class="toggle-row"><label for="pinAutoclick">Pin: auto-place point</label><label class="toggle"><input type="checkbox" id="pinAutoclick"><span class="toggle-track"></span></label></div>
+      <p class="setting-note">Pin placement is approximate; review the point before submitting.</p>
+      <div class="subsection-divider"></div>
+      <div class="toggle-row"><label for="silent">Silent mode</label><label class="toggle"><input type="checkbox" id="silent"><span class="toggle-track"></span></label></div>
+      <p class="setting-note">Hides page badges, answer highlights, and delay countdowns while preserving configured answer actions.</p>
+      <div class="slider-row">
+        <div class="slider-header">
+          <label for="answerDelay">Answer delay</label>
+          <span class="slider-val" id="delayValue">Off</span>
+        </div>
+        <input type="range" id="answerDelay" class="slider" min="0" max="30" step="0.5" value="0" aria-label="Answer delay">
+        <div class="slider-marks"><span>0s</span><span>15s</span><span>30s</span></div>
+      </div>
+    </section>
+
+    <section id="apiSettingsCard" class="section ai-card" aria-labelledby="toggleAIConfig">
+      <button id="toggleAIConfig" class="collapse-toggle" type="button" aria-expanded="false" aria-controls="aiSection">
+        <span>
+          <span class="section-kicker">Providers</span>
+          <span class="collapse-label">AI configuration</span>
+        </span>
+        <span id="collapseArrow" class="collapse-arrow" aria-hidden="true">＋</span>
+      </button>
+      <div id="aiSection" class="openai-section hidden">
+        <section id="providerPanel" class="api-panel" aria-labelledby="providerPanelTitle">
+          <div class="api-panel-heading"><div><span class="section-kicker">Routing</span><h3 id="providerPanelTitle">Provider and fallback</h3></div><span class="api-panel-index">01</span></div>
+          <label class="field-label" for="aiProvider">Preferred provider</label>
+          <select id="aiProvider" class="field-select" aria-label="AI provider">
+            <option value="openai">OpenAI</option>
+            <option value="gemini">Google AI Studio (Gemini)</option>
+            <option value="openrouter">OpenRouter</option>
+          </select>
+          <div class="toggle-row"><label for="aiFallback">Fallback to other saved providers</label><label class="toggle"><input type="checkbox" id="aiFallback" checked><span class="toggle-track"></span></label></div>
+          <div class="openai-note">On rate limits, outages, or key errors, quiz text or images may go to another provider with a saved key. Its usage limits and billing apply.</div>
+        </section>
+        <section id="apiKeysPanel" class="api-panel" aria-labelledby="apiKeysPanelTitle">
+          <div class="api-panel-heading"><div><span class="section-kicker">Credentials</span><h3 id="apiKeysPanelTitle">API key manager</h3></div><span class="api-panel-index">02</span></div>
+          <div class="api-key-manager" aria-labelledby="apiKeyManagerTitle">
+            <div class="api-key-manager-heading">
+              <div><span class="field-label" id="apiKeyManagerTitle">Saved keys</span><p class="setting-note">The first enabled key is tried first. Test access, rename, reorder, pause, replace, or remove each key here.</p></div>
+              <button id="testEnabledApiKeys" class="catalog-action secondary" type="button" title="Tests enabled keys without generating AI responses">Test enabled keys</button>
+            </div>
+            <p id="apiKeySummary" class="api-key-summary" role="status" aria-live="polite"></p>
+            <div id="apiKeyList" class="api-key-list" aria-label="Saved provider API keys"></div>
+            <div id="localConfigKeys" class="local-config-keys" aria-label="Local configuration keys"></div>
+            <details class="add-api-key">
+              <summary>Add an API key</summary>
+              <label class="field-label" for="newApiKeyLabel">Label</label>
+              <input id="newApiKeyLabel" class="field-input" type="text" maxlength="60" autocomplete="off" placeholder="e.g. Main account or backup">
+              <label class="field-label" for="newApiKeySecret">Provider API key</label>
+              <div class="key-input-row">
+                <input type="password" id="newApiKeySecret" class="field-input" aria-label="New provider API key" aria-describedby="keyStorageNote" autocomplete="new-password" spellcheck="false" placeholder="Paste your provider API key">
+                <button id="toggleNewApiKeyVisibility" class="btn-key-visibility" type="button" aria-controls="newApiKeySecret" aria-pressed="false" aria-label="Show new API key">Show</button>
+              </div>
+              <button id="addApiKey" class="btn-save add-key-button" type="button">Add key</button>
+            </details>
+          </div>
+        </section>
+        <section id="modelSettingsPanel" class="api-panel" aria-labelledby="modelSettingsTitle">
+          <div class="api-panel-heading"><div><span class="section-kicker">Answer quality</span><h3 id="modelSettingsTitle">Models and reasoning</h3></div><span class="api-panel-index">03</span></div>
+          <div class="model-selection-summary" role="status" aria-live="polite">
+            <div class="model-selection-summary-heading"><strong>Current model setup</strong><span id="modelSelectionState" class="model-selection-state">Loading saved setup…</span></div>
+            <div class="model-selection-summary-grid">
+              <p><span>Text answers</span><strong id="modelSelectionText">—</strong></p>
+              <p><span>Image questions</span><strong id="modelSelectionVision">—</strong></p>
+              <p><span>True/False lane</span><strong id="modelSelectionFastLane">—</strong></p>
+              <p><span>Reasoning</span><strong id="modelSelectionReasoning">—</strong></p>
+            </div>
+          </div>
+          <div class="model-quick-picks">
+            <div><strong>Quick picks</strong><p class="setting-note">Changes stay in this form until you save provider settings.</p></div>
+            <div class="model-quick-pick-actions">
+              <button id="useProviderDefaults" class="catalog-action secondary" type="button">Provider defaults</button>
+              <button id="useFastestModel" class="catalog-action" type="button">Fastest observed</button>
+            </div>
+          </div>
+        <div class="model-row">
+          <div class="model-col">
+            <label class="field-label" for="aiModel">Primary text-answer model</label>
+            <input id="aiModel" class="field-input" type="text" list="textModelOptions" aria-label="Primary text-answer model ID" autocomplete="off">
+            <datalist id="textModelOptions"></datalist>
+            <p id="primaryModelHelp" class="setting-note model-field-help">Choose a catalog model below or enter a provider model ID. This model handles normal text questions.</p>
+          </div>
+          <div class="model-col">
+            <label class="field-label" for="aiVisionModel">Image-question model</label>
+            <input id="aiVisionModel" class="field-input" type="text" list="visionModelOptions" aria-label="Image-question model ID" autocomplete="off">
+            <datalist id="visionModelOptions"></datalist>
+            <p id="visionModelHelp" class="setting-note model-field-help">Used when a Kahoot question includes an image. Pick a catalog model marked “Image input”.</p>
+          </div>
+        </div>
+        <div class="reasoning-row">
+          <label class="field-label" for="reasoningEffort">Model reasoning effort</label>
+          <select id="reasoningEffort" class="field-select" aria-label="Model reasoning effort">
+            <option value="none">Lowest / fastest available</option>
+            <option value="minimal">Minimal</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="xhigh">Extra high</option>
+            <option value="max">Maximum (where supported)</option>
+          </select>
+          <p class="setting-note">Unsupported levels are adapted to each model’s API. Gemini 3 and 2.5 Pro cannot fully disable reasoning; “Lowest” uses their fastest supported level. Higher effort can increase response time and token use.</p>
+        </div>
+        </section>
+        <section id="fastBinaryPanel" class="api-panel" aria-labelledby="fastBinaryTitle">
+          <div class="api-panel-heading"><div><span class="section-kicker">Latency</span><h3 id="fastBinaryTitle">Fast lane for True/False</h3></div><span class="api-panel-index">04</span></div>
+        <div class="reasoning-row fast-binary-row">
+          <div class="toggle-row"><label for="fastBinaryAnswers">Use a separate fast model</label><label class="toggle"><input type="checkbox" id="fastBinaryAnswers"><span class="toggle-track"></span></label></div>
+          <p class="setting-note">Runs only for exactly two choices, True and False, with no question image. A reply that is not exactly TRUE or FALSE, or a failed request, retries with your primary model.</p>
+          <label class="field-label" for="fastBinaryModel">Fast-lane model</label>
+          <select id="fastBinaryModel" class="field-select" aria-label="Fast True or False model"><option value="">Automatic fastest model</option></select>
+          <p id="fastBinaryModelHelp" class="setting-note">Gemini and OpenAI use the median stream TPS from three checks. OpenRouter uses the best free endpoint’s provider-reported 30-minute p50.</p>
+        </div>
+        </section>
+        <section id="backupModelsPanel" class="api-panel" aria-labelledby="backupModelsTitle">
+          <div class="api-panel-heading"><div><span class="section-kicker">Resilience</span><h3 id="backupModelsTitle">Fallback models</h3></div><span class="api-panel-index">05</span></div>
+        <div class="model-backups">
+          <div class="backup-heading">
+            <div><label class="field-label" for="backupModel1">Quota and outage backups</label><p class="setting-note">Choose up to five models in the order they should be tried after a rate limit or model error.</p></div>
+            <span id="backupCount" class="catalog-count">0 / 5</span>
+          </div>
+          <div class="backup-slots" aria-label="Ordered backup models">
+            <label><span>1</span><select id="backupModel1" class="field-select backup-model" data-slot="0" aria-label="First backup model"><option value="">No backup</option></select></label>
+            <label><span>2</span><select id="backupModel2" class="field-select backup-model" data-slot="1" aria-label="Second backup model"><option value="">No backup</option></select></label>
+            <label><span>3</span><select id="backupModel3" class="field-select backup-model" data-slot="2" aria-label="Third backup model"><option value="">No backup</option></select></label>
+            <label><span>4</span><select id="backupModel4" class="field-select backup-model" data-slot="3" aria-label="Fourth backup model"><option value="">No backup</option></select></label>
+            <label><span>5</span><select id="backupModel5" class="field-select backup-model" data-slot="4" aria-label="Fifth backup model"><option value="">No backup</option></select></label>
+          </div>
+        </div>
+        </section>
+        <section id="modelCatalogPanel" class="api-panel" aria-labelledby="modelCatalogTitle">
+          <div class="api-panel-heading"><div><span class="section-kicker">Discovery</span><h3 id="modelCatalogTitle">Model catalog</h3></div><span class="api-panel-index">06</span></div>
+        <div class="model-catalog">
+          <div class="catalog-toolbar">
+            <div><label class="field-label" for="modelSearch">Find a model</label><p id="catalogHelp" class="setting-note">Gemini and OpenAI run three short streams and report median TPS plus first-token time. OpenRouter uses provider-reported free-endpoint metadata; charges or quota may apply to generation checks.</p></div>
+            <button id="refreshModels" class="btn-catalog" type="button">Refresh</button>
+          </div>
+          <div class="catalog-filters">
+            <input id="modelSearch" class="field-input catalog-search" type="search" aria-label="Search models by name or ID" placeholder="Search model name, ID, or description">
+            <select id="modelCapabilityFilter" class="field-select catalog-capability-filter" aria-label="Filter models by capability">
+              <option value="all">All models</option>
+              <option value="text">Text answers</option>
+              <option value="vision">Image input</option>
+              <option value="reasoning">Reasoning support</option>
+              <option value="measured">Speed reading available</option>
+            </select>
+          </div>
+          <div id="catalogStatus" class="catalog-status" role="status" aria-live="polite">No catalog loaded yet.</div>
+          <div id="modelCatalogList" class="model-catalog-list" aria-label="Available models"></div>
+          <button id="showMoreModels" class="btn-catalog show-more-models hidden" type="button">Show more models</button>
+        </div>
+        </section>
+        <section id="saveSettingsPanel" class="api-panel api-save-panel" aria-labelledby="saveSettingsTitle">
+          <div class="api-panel-heading"><div><span class="section-kicker">Apply</span><h3 id="saveSettingsTitle">Save provider setup</h3></div><span class="api-panel-index">07</span></div>
+        <div id="providerQuota" class="provider-quota" role="status" aria-live="polite"></div>
+        <div class="openai-actions">
+          <button id="saveApi" class="btn-save" type="button">Save</button>
+        </div>
+        <p id="aiFeedback" class="settings-feedback" role="status" aria-live="polite"></p>
+        <div id="keyStorageNote" class="openai-note">Provider credentials are not synced or encrypted by this extension; anyone with access to this browser profile or extension storage may be able to read them. “Test key” makes a no-generation request to the provider. Keys from the optional local config file are imported on first use; removing a manager entry does not erase the copy in that file.</div>
+        </section>
+      </div>
+    </section>
+    </main>
+
+    <div class="footer"><div class="footer-shortcut">Keyboard shortcut <kbd>Alt+K</kbd> retries the current question</div><span class="footer-brand">UwU Kahoot AI · your browser, your keys</span></div>
+
+  </div>
+  <script type="module" src="../scripts/popup/controller.js"></script>
+</body>
+</html>

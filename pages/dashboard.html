@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>UwU Kahoot AI Dashboard</title>
+  <link rel="stylesheet" href="../styles/dashboard.css">
+  <link rel="stylesheet" href="../styles/dashboard-motion.css">
+</head>
+<body data-mode="3d">
+  <div class="dashboard-shell">
+    <header class="dashboard-topbar">
+      <a class="dashboard-brand" href="#top" aria-label="UwU Kahoot AI dashboard home">
+        <img class="brand-glyph" src="../icons/icon48.png" alt="" aria-hidden="true">
+        <span><strong>UwU Kahoot AI</strong><small>QUIZ COMPANION</small></span>
+      </a>
+      <div class="view-control" role="group" aria-label="Dashboard appearance">
+        <span class="view-label">View</span>
+        <button class="view-button" type="button" data-mode="classic" aria-pressed="false">Classic</button>
+        <button class="view-button" type="button" data-mode="3d" aria-pressed="true">3D scroll</button>
+        <a class="view-button stats-nav" href="popup.html?api=1" target="_blank" rel="noopener">API setup</a>
+        <a class="view-button stats-nav" href="stats.html">Stats</a>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="dashboard-hero" aria-labelledby="heroTitle">
+        <div class="hero-sticky">
+          <div class="hero-copy">
+            <span class="eyebrow"><i></i> YOUR QUIZ, IN FOCUS</span>
+            <h1 id="heroTitle">A clearer view<br>of every session.</h1>
+            <p>Live question status, answer controls, and AI providers in one workspace.</p>
+            <a class="scroll-cue" href="#assistant">Scroll to enter the workspace <span aria-hidden="true">↓</span></a>
+          </div>
+          <div class="hero-stage" aria-hidden="true">
+            <div class="stage-orb"></div>
+            <div class="stage-orbit"></div>
+            <div class="stage-grid"></div>
+            <div class="stage-particles"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="glass-card card-back">
+              <span class="preview-kicker">ANSWER FLOW</span>
+              <strong>Question to suggestion.</strong>
+              <p class="preview-copy">Detect quiz context, request an AI answer, then review the result.</p>
+            </div>
+            <div class="glass-card card-front">
+              <div class="preview-card-top"><span>WORKSPACE PREVIEW</span><b>UWU AI</b></div>
+              <strong>Quiz tools, in one place.</strong>
+              <div class="preview-choice featured"><i>01</i><span>Question monitor</span><small>LIVE VIEW</small></div>
+              <div class="preview-choice"><i>02</i><span>Provider fallback</span><small>OPTIONAL</small></div>
+            </div>
+            <div class="float-chip chip-fast"><span>↗</span> QUICK CONTROLS</div>
+            <div class="float-chip chip-ai"><span>✦</span> AI ROUTING</div>
+          </div>
+          <div class="hero-footnote"><span>01</span><span>SCROLL TO MOVE THROUGH THE SCENE</span><span class="foot-line"></span></div>
+          <div class="scroll-progress" aria-hidden="true"><span></span></div>
+        </div>
+      </section>
+
+      <section class="dashboard-content" id="assistant" aria-label="UwU Kahoot AI controls">
+        <div class="content-heading">
+          <div><span class="eyebrow"><i></i> WORKSPACE</span><h2>Quiz dashboard</h2></div>
+          <span class="content-hint">Preferences use extension storage; API keys and stats stay in this profile.</span>
+        </div>
+        <div class="app-window">
+          <div class="window-bar" aria-hidden="true"><span></span><span></span><span></span><b>UwU Kahoot AI · Workspace</b></div>
+          <iframe id="dashboardApp" src="popup.html?dashboard=1" title="UwU Kahoot AI quiz dashboard" loading="eager"></iframe>
+        </div>
+      </section>
+    </main>
+    <footer class="dashboard-footer"><span>UwU Kahoot AI</span><span>LOCAL EXTENSION DASHBOARD</span><a href="#top">Back to top ↑</a></footer>
+  </div>
+  <script type="module" src="../scripts/dashboard/controller.js"></script>
+</body>
+</html>

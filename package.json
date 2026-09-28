@@ -1,0 +1,13 @@
+{
+  "name": "uwu-kahoot-ai",
+  "version": "4.2.0",
+  "description": "AI-powered Kahoot companion browser extension",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npm run build:page-bridge",
+    "build:page-bridge": "node tools/build-page-bridge.mjs",
+    "check": "node tools/check-syntax.mjs && npm run check:page-bridge",
+    "check:page-bridge": "node tools/build-page-bridge.mjs --check"
+  }
+}
