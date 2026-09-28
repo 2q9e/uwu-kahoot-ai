@@ -20,6 +20,8 @@ export function createLiveSessionQuestion({
   tabsApi = globalThis.chrome?.tabs
 }) {
   let hasCurrentQuestion = false;
+  let liveStateRevision = 0;
+  let pollSequence = 0;
 
   function showHandoff(handoff) {
     if (!answerHandoff || !handoff?.stage) return;
@@ -157,6 +159,8 @@ export function createLiveSessionQuestion({
   }
 
   async function pollCurrentQuestion(tabSession, tabId = tabSession.getSelectedTabId()) {
+    const pollId = ++pollSequence;
+    const revisionAtStart = liveStateRevision;
     const targetTabId = tabId;
     const tab = tabSession.getTabs().find(candidate => candidate.id === targetTabId);
     if (!tab?.id) {
@@ -168,6 +172,10 @@ export function createLiveSessionQuestion({
       }
       return pollCurrentQuestion(tabSession, tabSession.getSelectedTabId());
     }
+    const isCurrentPoll = () => pollId === pollSequence &&
+      revisionAtStart === liveStateRevision &&
+      tabSession.getSelectedTabId() === targetTabId &&
+      tabSession.getTabs().find(candidate => candidate.id === targetTabId)?.url === tab.url;
     let failureCode = 'KAHOOT_TAB_UNAVAILABLE';
     try {
       let connected = false;
@@ -180,8 +188,7 @@ export function createLiveSessionQuestion({
           connected = true;
         } catch (_) {}
       }
-      if (tabSession.getSelectedTabId() !== targetTabId) return;
-      if (tabSession.getTabs().find(candidate => candidate.id === targetTabId)?.url !== tab.url) return;
+      if (!isCurrentPoll()) return;
       if (!connected) {
         failureCode = 'CONTENT_SCRIPT_DISCONNECTED';
         tabSession.setConnection(tab.id, { url: tab.url, state: 'reload' });
@@ -191,6 +198,7 @@ export function createLiveSessionQuestion({
       tabSession.setConnection(tab.id, { url: tab.url, state: 'connected' });
       tabSession.renderTabs();
 
+      if (!isCurrentPoll()) return;
       let response = null;
       try {
         response = await tabsApi.sendMessage(tab.id, { action: 'getQuestion' });
@@ -198,8 +206,7 @@ export function createLiveSessionQuestion({
         failureCode = 'CONTENT_SCRIPT_DISCONNECTED';
         throw new Error('The selected tab stopped responding.');
       }
-      if (tabSession.getSelectedTabId() !== targetTabId) return;
-      if (tabSession.getTabs().find(candidate => candidate.id === targetTabId)?.url !== tab.url) return;
+      if (!isCurrentPoll()) return;
       if (response?.question) {
         showQuestion(response.question.title, response.question.type, response.readiness);
         if (response.answer) showAnswer(response.answer);
@@ -212,7 +219,7 @@ export function createLiveSessionQuestion({
         setLiveStatus('ready', 'Connected to Kahoot', 'Waiting for a question. If one is already on screen, the host must enable “Show questions & answers on players’ devices.”');
       }
     } catch (_) {
-      if (tabSession.getSelectedTabId() !== targetTabId) return;
+      if (!isCurrentPoll()) return;
       recordDiagnostic?.(failureCode, { stage: 'popup' });
       tabSession.setConnection(tab.id, { url: tab.url, state: 'reload' });
       tabSession.renderTabs();
@@ -224,6 +231,9 @@ export function createLiveSessionQuestion({
   function handleRuntimeMessage(request, sender, tabSession) {
     const selectedTab = tabSession.getSelectedTab();
     if (!isCurrentKahootTabMessage(sender.tab, selectedTab)) return;
+    if (['resetLiveState', 'updateQuestion', 'updateAnswer', 'updateStatus'].includes(request.action)) {
+      liveStateRevision++;
+    }
     tabSession.setConnection(selectedTab.id, { url: selectedTab.url, state: 'connected' });
     tabSession.renderTabs();
     if (request.action === 'resetLiveState') {
