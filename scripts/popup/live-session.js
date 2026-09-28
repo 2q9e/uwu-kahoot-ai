@@ -28,7 +28,7 @@ const DIAGNOSTICS_STORAGE_KEY = 'uwuKahootDiagnosticsV1';
 let diagnosticEvents = [];
 let diagnosticsRevision = 0;
 
-function reportDiagnostic(code, metadata = {}) {
+function recordDiagnostic(code, metadata = {}) {
   try { chrome.runtime.sendMessage({ action: 'recordDiagnostic', code, metadata }).catch(() => {}); }
   catch (_) {}
 }
