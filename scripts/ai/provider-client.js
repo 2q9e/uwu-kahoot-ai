@@ -18,7 +18,7 @@ export async function callModel(provider, apiKey, model, userPrompt, opts = {}) 
   const requestOpts = { ...opts, reasoningEffort: normalizeReasoningEffort(reasoningEffort) };
   return withProviderFallback(provider, apiKey, model, 'modelKey', (target, requestBudget) =>
     callModelOnce(target.provider, target.apiKey, target.model, userPrompt, { ...requestOpts, requestBudget }),
-  { settingsSnapshot, providerKeys: opts.providerKeys, signal: opts.signal, deadline: opts.deadline, attemptCounter: opts.attemptCounter });
+  { settingsSnapshot, providerKeys: opts.providerKeys, signal: opts.signal, deadline: opts.deadline, attemptCounter: opts.attemptCounter, onProgress: opts.onProgress });
 }
 
 export async function callVision(provider, apiKey, visionModel, systemPrompt, textPrompt, imageUrl, opts = {}) {
@@ -27,5 +27,5 @@ export async function callVision(provider, apiKey, visionModel, systemPrompt, te
   const requestOpts = { ...opts, reasoningEffort: normalizeReasoningEffort(reasoningEffort) };
   return withProviderFallback(provider, apiKey, visionModel, 'visionKey', (target, requestBudget) =>
     callVisionOnce(target.provider, target.apiKey, target.model, systemPrompt, textPrompt, imageUrl, { ...requestOpts, requestBudget }),
-  { settingsSnapshot, providerKeys: opts.providerKeys, signal: opts.signal, deadline: opts.deadline, attemptCounter: opts.attemptCounter });
+  { settingsSnapshot, providerKeys: opts.providerKeys, signal: opts.signal, deadline: opts.deadline, attemptCounter: opts.attemptCounter, onProgress: opts.onProgress });
 }

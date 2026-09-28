@@ -151,7 +151,11 @@ async function handleQuestion(question, tabId, frameId, requestId, solveId, sign
   if (!question?.title || !tabId) return;
   const t0 = performance.now();
   const ms = () => `${Math.round(performance.now() - t0)}ms`;
-  const answerOptions = { signal, deadline: Date.now() + AI_REQUEST_BUDGET_MS };
+  const answerOptions = {
+    signal,
+    deadline: Date.now() + AI_REQUEST_BUDGET_MS,
+    onProgress: progress => sendToTab(tabId, frameId, 'answerProgress', { ...progress, requestId })
+  };
 
   log(`Question received | Type: ${question.type || 'unknown'} | Choices: ${(question.choices || []).length}`);
 

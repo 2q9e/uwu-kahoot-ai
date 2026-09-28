@@ -88,6 +88,9 @@ export async function withProviderFallback(provider, apiKey, model, modelField, 
   const deadline = Math.min(Number(requestContext.deadline) || Infinity, Date.now() + AI_REQUEST_BUDGET_MS);
   const signal = requestContext.signal;
   const attemptCounter = requestContext.attemptCounter || { value: 0 };
+  const reportProgress = progress => {
+    try { requestContext.onProgress?.(progress); } catch (_) {}
+  };
   if (signal?.aborted) throw makeAbortError();
   if (Date.now() >= deadline) throw new Error('AI request time budget expired.');
   const attempts = await getProviderAttempts(provider, apiKey, model, modelField, requestContext.settingsSnapshot, requestContext.providerKeys);
@@ -101,9 +104,11 @@ export async function withProviderFallback(provider, apiKey, model, modelField, 
     attempted.add(index);
     attemptCounter.value += 1;
     const target = attempts[index];
+    reportProgress({ event: 'attempt', provider: target.provider, model: target.model, attempt: attemptCounter.value });
     try {
       const result = await request(target, { deadline });
       if (index > 0) log(`Answered using fallback ${providerLabel(target.provider)} model ${target.model}`);
+      reportProgress({ event: 'success', provider: target.provider, model: target.model, attempt: attemptCounter.value });
       return result;
     } catch (rawError) {
       const error = redactProviderError(rawError, target.apiKey);
@@ -113,6 +118,11 @@ export async function withProviderFallback(provider, apiKey, model, modelField, 
         ? findNextProviderAttempt(attempts, index, error, attempted)
         : -1;
       const next = nextIndex >= 0 ? attempts[nextIndex] : null;
+      reportProgress({
+        event: 'failed', provider: target.provider, model: target.model,
+        attempt: attemptCounter.value, httpStatus: Number.isFinite(error.status) ? error.status : null,
+        nextProvider: next?.provider || null, nextModel: next?.model || null
+      });
       if (!next) {
         if (attempts.length === 1 && attempted.size === 1) throw error;
         break;

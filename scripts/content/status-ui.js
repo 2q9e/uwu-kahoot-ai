@@ -37,16 +37,18 @@ globalThis.UwUKahootAIStatusUi = {
       }
     }
 
-    function updateStatus(msg, detail) {
-      if (/error|failed/i.test(msg)) {
+    function updateStatus(msg, detail, handoff) {
+      if (handoff?.stage === 'send_failed' || /error|failed/i.test(msg)) {
         setQuestionState('error', detail || msg);
       } else if (/waiting for (on-screen answers|answer choices)/i.test(msg)) {
         setQuestionState('waiting_for_choices', detail || msg);
       } else if (/preparing question/i.test(msg)) {
         setQuestionState(getQuestionState(), null);
+      } else if (['attempt', 'success', 'matching', 'matched', 'sending'].includes(handoff?.stage)) {
+        setQuestionState('processing', null);
       } else if (/sending|retrying|manual retry/i.test(msg)) {
         setQuestionState('processing', null);
-      } else if (/answer received|answered|pin answer|jumble answer|jumble order shown|slider answer|open-ended answer/i.test(msg)) {
+      } else if (handoff?.stage === 'sent' || handoff?.stage === 'highlighted' || /answer received|answered|pin answer|jumble answer|jumble order shown|slider answer|open-ended answer/i.test(msg)) {
         setQuestionState('answered', null);
       } else if (getCurrentQuestion()) {
         setQuestionState('ready', null);
@@ -55,7 +57,8 @@ globalThis.UwUKahootAIStatusUi = {
       broadcastToPopup('updateStatus', {
         status: msg.replace(/[✅❌]/g, '').trim(),
         detail: detail || '',
-        state: getQuestionState()
+        state: getQuestionState(),
+        ...(handoff ? { handoff } : {})
       });
       if (getSilentMode()) return;
       if (!statusEl) createStatusIndicator();

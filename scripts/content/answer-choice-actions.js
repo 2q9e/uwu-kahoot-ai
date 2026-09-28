@@ -81,6 +81,10 @@
         return;
       }
 
+      updateStatus(options.autoClick === false ? 'Answer matched to Kahoot choices' : 'Answer matched · preparing submission',
+        `${matchedElements.length} choice${matchedElements.length === 1 ? '' : 's'} matched on the page.`,
+        { stage: options.autoClick === false ? 'highlighted' : 'matched' });
+
       if (options.highlight !== false && !options.silentMode) {
         const pulseHighlight = options.autoClick === false &&
           !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -158,14 +162,14 @@
     }
 
     function fireClick(index) {
+      updateStatus('Sending answer to Kahoot…', 'Waiting for the Kahoot connection to accept the outgoing answer.', { stage: 'sending' });
       window.dispatchEvent(new CustomEvent('autoClickAnswer', { detail: index }));
-      const shortA = getCurrentAnswer()?.length > 60 ? getCurrentAnswer().slice(0, 57) + '...' : getCurrentAnswer();
-      updateStatus('Answered ✅', shortA);
     }
 
     function fireMultiClick(indices, allElements) {
       const nonce = getSubmitNonce();
 
+      updateStatus('Sending selected choices to Kahoot…', 'Waiting for the Kahoot connection to accept the outgoing answer.', { stage: 'sending' });
       window.dispatchEvent(new CustomEvent('autoClickMultiSelect', { detail: indices }));
 
       for (const idx of indices) {
@@ -175,8 +179,6 @@
       }
 
       clickSubmitButton('multi-select', 0, nonce);
-      const shortA = getCurrentAnswer()?.length > 60 ? getCurrentAnswer().slice(0, 57) + '...' : getCurrentAnswer();
-      updateStatus('Answered ✅', shortA);
     }
 
     function clickSubmitButton(context = 'generic', attempt = 0, nonce = getSubmitNonce()) {
@@ -196,7 +198,7 @@
         if (!btn || nonce !== getSubmitNonce()) return false;
         log(`Clicking ${context} submit via: ${selector}`);
         btn.click();
-        updateStatus('Answered ✅', getCurrentAnswer()?.length > 60 ? getCurrentAnswer().slice(0, 57) + '...' : getCurrentAnswer());
+        if (context !== 'multi-select') updateStatus('Answered ✅', getCurrentAnswer()?.length > 60 ? getCurrentAnswer().slice(0, 57) + '...' : getCurrentAnswer());
         return true;
       };
 
@@ -206,7 +208,7 @@
         if (nonce !== getSubmitNonce()) return;
         if (found && click(found)) return;
         log(`No ${context} submit button found before timeout (WS likely already submitted)`);
-        updateStatus('Answered ✅', getCurrentAnswer()?.length > 60 ? getCurrentAnswer().slice(0, 57) + '...' : getCurrentAnswer());
+        if (context !== 'multi-select') updateStatus('Answered ✅', getCurrentAnswer()?.length > 60 ? getCurrentAnswer().slice(0, 57) + '...' : getCurrentAnswer());
       });
     }
 
