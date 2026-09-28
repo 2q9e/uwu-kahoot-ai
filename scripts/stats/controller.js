@@ -4,6 +4,7 @@ const averageResponse = document.getElementById('averageResponse');
 const totalResponseTime = document.getElementById('totalResponseTime');
 const recentCount = document.getElementById('recentCount');
 const recentList = document.getElementById('recentList');
+const recentUpdateStatus = document.getElementById('recentUpdateStatus');
 const emptyState = document.getElementById('emptyState');
 const metricGrid = document.querySelector('.metric-grid');
 const recentCard = document.querySelector('.recent-card');
@@ -79,7 +80,7 @@ function nonnegativeNumber(value) {
   return Number.isFinite(number) && number >= 0 ? number : null;
 }
 
-function renderUnavailable() {
+function renderUnavailable(announceUpdate = false) {
   setMetricValue(totalSolved, 'Unavailable');
   setMetricValue(averageResponse, 'Unavailable');
   setMetricValue(totalResponseTime, 'Unavailable');
@@ -88,17 +89,18 @@ function renderUnavailable() {
   recentList.classList.add('hidden');
   emptyState.textContent = 'Stats could not be read from extension storage.';
   emptyState.classList.remove('hidden');
+  recentUpdateStatus.textContent = announceUpdate ? 'Recent answer history is unavailable.' : '';
   metricGrid?.setAttribute('aria-busy', 'false');
   recentCard?.setAttribute('aria-busy', 'false');
 }
 
-function renderStats(stats) {
+function renderStats(stats, announceUpdate = false) {
   const noStoredHistory = stats === undefined || stats === null;
   const record = stats && typeof stats === 'object' && !Array.isArray(stats) ? stats : null;
   const countValue = noStoredHistory ? 0 : nonnegativeNumber(record?.totalSolved);
   const totalValue = noStoredHistory ? 0 : nonnegativeNumber(record?.totalResponseMs);
   if (countValue === null) {
-    renderUnavailable();
+    renderUnavailable(announceUpdate);
     return;
   }
   const count = Math.floor(countValue);
@@ -114,6 +116,9 @@ function renderStats(stats) {
   recentList.classList.toggle('hidden', recent.length === 0);
   emptyState.classList.toggle('hidden', recent.length !== 0);
   emptyState.textContent = count === 0 ? 'No AI answers have been recorded in this browser yet.' : 'No recent entries are stored for these generated answers.';
+  recentUpdateStatus.textContent = announceUpdate
+    ? `Recent answer history updated. ${recent.length} ${recent.length === 1 ? 'entry' : 'entries'}.`
+    : '';
   metricGrid?.setAttribute('aria-busy', 'false');
   recentCard?.setAttribute('aria-busy', 'false');
 }
@@ -167,7 +172,7 @@ if (!motionPreference.matches) {
 chrome.storage.onChanged.addListener((changes, areaName) => {
   if (areaName !== 'local' || !changes[STORAGE_KEY]) return;
   statsRevision += 1;
-  renderStats(changes[STORAGE_KEY].newValue);
+  renderStats(changes[STORAGE_KEY].newValue, true);
 });
 
 loadStats();
