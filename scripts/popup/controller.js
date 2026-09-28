@@ -101,10 +101,12 @@ openApiDashboardBtn?.addEventListener('click', async () => {
     if (versionLabel) versionLabel.textContent = 'Provider settings';
   } else {
     initializePopupStats();
-    await initializeLiveSession();
+    void initializeLiveSession().catch(() => {
+      setLiveStatus('error', 'Could not check Kahoot tabs', 'Close and reopen the popup to retry the tab check.');
+    });
   }
-  const hasKey = await settingsController.loadSettingsWithRecovery();
   settingsController.wireSettings();
+  const hasKey = await settingsController.loadSettingsWithRecovery();
   await settingsController.initializeModelCatalog();
   if (isApiPage || !hasKey) {
     settingsController.expandAdvancedSettings();
