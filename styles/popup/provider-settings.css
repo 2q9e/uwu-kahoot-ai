@@ -27,6 +27,9 @@
 .model-card-speed { color: #c3a8c7; }
 .model-card-description { color: #839089; }
 .model-card-actions { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.model-speed-action { display: flex; flex: 1 1 100%; flex-wrap: wrap; align-items: center; gap: 5px 8px; min-width: 0; }
+.model-speed-action .catalog-action { flex: 0 0 auto; }
+.model-speed-cost-note { flex: 1 1 150px; min-width: 0; color: #cbb9cf; font-size: 10px; line-height: 1.4; }
 .catalog-action { min-height: 27px; padding: 0 8px; border: 1px solid rgba(232,121,249,.23); border-radius: 7px; background: rgba(192,38,211,.13); color: #f5dafa; font: 650 9px system-ui, sans-serif; cursor: pointer; transition: background .14s, transform .14s; }
 .catalog-action:hover:not(:disabled) { transform: translateY(-1px); background: rgba(192,38,211,.24); }
 .catalog-action.secondary { border-color: rgba(255,255,255,.11); background: rgba(255,255,255,.045); color: #c7d0cb; }

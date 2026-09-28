@@ -1,6 +1,8 @@
 import { formatCatalogTokens, formatModelSpeed } from './model-catalog-format.js';
 import { createModelCatalogSpeedActions } from './model-catalog-speed-actions.js';
 
+let paidSpeedActionNoteSequence = 0;
+
 export function createModelCatalogRenderer({
   catalogPrefix,
   getCurrentProvider,
@@ -41,6 +43,21 @@ export function createModelCatalogRenderer({
     button.className = className;
     button.textContent = text;
     return button;
+  }
+
+  function appendPaidSpeedAction(actions, model, measureSpeed, title) {
+    const group = document.createElement('div');
+    group.className = 'model-speed-action';
+    const measure = createAction('Measure speed');
+    measure.title = title;
+    measure.addEventListener('click', () => measureSpeed(model, measure));
+    const costNote = document.createElement('span');
+    costNote.className = 'model-speed-cost-note';
+    costNote.id = `paid-speed-cost-note-${++paidSpeedActionNoteSequence}`;
+    costNote.textContent = '3 short generation requests · provider charges may apply';
+    measure.setAttribute('aria-describedby', costNote.id);
+    group.append(measure, costNote);
+    actions.append(group);
   }
 
   function appendModelActions(actions, model, allModels) {
@@ -87,17 +104,21 @@ export function createModelCatalogRenderer({
     actions.append(addBackup);
 
     if (model.provider === 'gemini' && model.supportsAnswers !== false) {
-      const measure = createAction('Measure speed');
-      measure.title = 'Runs three short streaming generations and reports median TPS plus first-token time using Google candidate token counts. Quota or billing may apply.';
-      measure.addEventListener('click', () => measureGeminiSpeed(model, measure));
-      actions.append(measure);
+      appendPaidSpeedAction(
+        actions,
+        model,
+        measureGeminiSpeed,
+        'Runs three short streaming generations and reports median TPS plus first-token time using Google candidate token counts. Quota or billing may apply.'
+      );
     }
 
     if (model.provider === 'openai' && model.supportsAnswers !== false) {
-      const measure = createAction('Measure speed');
-      measure.title = 'Runs three short streaming generations and reports median TPS plus first-token time using token-level stream data. Models without that data cannot be measured. Usage charges may apply.';
-      measure.addEventListener('click', () => measureOpenAISpeed(model, measure));
-      actions.append(measure);
+      appendPaidSpeedAction(
+        actions,
+        model,
+        measureOpenAISpeed,
+        'Runs three short streaming generations and reports median TPS plus first-token time using token-level stream data. Models without that data cannot be measured. Usage charges may apply.'
+      );
     }
 
     if (model.provider === 'openrouter') {

@@ -267,7 +267,7 @@
           <summary class="api-panel-heading"><span class="section-kicker">MODEL LIST</span><h3 id="modelCatalogTitle">Model catalog</h3><span class="api-panel-optional">Optional</span></summary>
         <div class="model-catalog">
           <div class="catalog-toolbar">
-            <div><label class="field-label" for="modelSearch">Find a model</label><p id="catalogHelp" class="setting-note">Gemini and OpenAI run three short streams and report median TPS plus first-token time. OpenRouter uses provider-reported free-endpoint metadata; charges or quota may apply to generation checks.</p></div>
+            <div><label class="field-label" for="modelSearch">Find a model</label><p id="catalogHelp" class="setting-note">OpenAI and Gemini speed checks send three short generation requests and report median TPS plus first-token time; provider charges may apply, and a one-time confirmation appears before the first check. OpenRouter reads provider-reported free-endpoint metadata without generating a response.</p></div>
             <button id="refreshModels" class="btn-catalog" type="button">Refresh</button>
           </div>
           <div class="catalog-filters">

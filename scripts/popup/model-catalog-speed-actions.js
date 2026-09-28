@@ -2,6 +2,16 @@ import { enrichOpenRouterThroughput, measureGeminiModel, measureOpenAIModel } fr
 
 const OPENAI_SPEED_STORAGE_KEY = 'uwuKahootOpenAISpeedV2';
 const GEMINI_SPEED_STORAGE_KEY = 'uwuKahootGeminiSpeedV2';
+let paidSpeedChecksConfirmed = false;
+
+function confirmPaidSpeedCheck(providerName) {
+  if (paidSpeedChecksConfirmed) return true;
+  const accepted = window.confirm(
+    `A ${providerName} speed check sends three short generation requests and may incur provider charges. Continue?`
+  );
+  if (accepted) paidSpeedChecksConfirmed = true;
+  return accepted;
+}
 
 export function createModelCatalogSpeedActions({
   catalogPrefix,
@@ -23,6 +33,10 @@ export function createModelCatalogSpeedActions({
       return;
     }
     if (!isCurrentProvider()) return;
+    if (!confirmPaidSpeedCheck('Google AI Studio')) {
+      setAiFeedback('Speed check canceled; no requests were sent.');
+      return;
+    }
     button.disabled = true;
     button.textContent = 'Measuring 1/3…';
     try {
@@ -93,6 +107,10 @@ export function createModelCatalogSpeedActions({
     const key = await getCurrentProviderKey('openai');
     if (!key) {
       setAiFeedback('Enter or save an OpenAI key before measuring speed.', 'error');
+      return;
+    }
+    if (!confirmPaidSpeedCheck('OpenAI')) {
+      setAiFeedback('Speed check canceled; no requests were sent.');
       return;
     }
     button.disabled = true;

@@ -319,6 +319,7 @@ body.api-page .model-card-heading strong { font-size: 13px; }
 body.api-page .model-card-heading code { font-size: 10px; }
 body.api-page .model-card-meta,
 body.api-page .model-card-speed,
+body.api-page .model-speed-cost-note,
 body.api-page .model-card-description { font-size: 11px; line-height: 1.5; }
 body.api-page .catalog-action,
 body.api-page .btn-catalog { min-height: 38px; font-size: 12px; }
