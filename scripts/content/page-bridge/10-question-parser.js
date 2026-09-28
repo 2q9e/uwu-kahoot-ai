@@ -17,12 +17,13 @@ function extractChoiceText(value, depth = 0) {
   if (typeof value !== 'object') return '';
 
   const candidates = [
-    value.answer,
     value.text,
     value.label,
     value.choiceText,
     value.answerText,
     value.content,
+    value.value,
+    value.answer,
     value.choice,
     value.imageMetadata?.altText,
     value.media?.altText,
@@ -38,10 +39,16 @@ function extractChoiceText(value, depth = 0) {
 
 function getRawChoices(content) {
   let emptyArray = null;
-  for (const key of ['choices', 'answers', 'answerOptions', 'options']) {
-    if (!Array.isArray(content[key])) continue;
-    if (content[key].length > 0) return content[key];
-    emptyArray ||= content[key];
+  const sources = [content];
+  if (content.question && typeof content.question === 'object' && !Array.isArray(content.question)) {
+    sources.push(content.question);
+  }
+  for (const source of sources) {
+    for (const key of ['choices', 'answers', 'answerOptions', 'answerChoices', 'options']) {
+      if (!Array.isArray(source[key])) continue;
+      if (source[key].length > 0) return source[key];
+      emptyArray ||= source[key];
+    }
   }
   return emptyArray || [];
 }

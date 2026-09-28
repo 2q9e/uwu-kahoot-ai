@@ -3,35 +3,38 @@
 
   function createQuestionDom({ domAdapter, waitForDomResult, getNonce, log }) {
     function getExpectedChoiceCount(type, choices = []) {
-      const parsedCount = Array.isArray(choices)
-        ? choices.filter(choice => String(choice ?? '').trim()).length
-        : 0;
+      const parsedCount = Array.isArray(choices) ? choices.length : 0;
       if (parsedCount >= 2) return parsedCount;
-      return type === 'true_false' ? 2 : 4;
+      return type === 'true_false' ? 2 : 0;
     }
 
     async function pollForAnswerChoices(expectedCount = 0, nonce = getNonce(), fallbackChoices = []) {
       const requiredCount = Math.max(2, Number(expectedCount) || 0);
+      const fallbacks = Array.isArray(fallbackChoices)
+        ? fallbackChoices.map(choice => String(choice ?? '').trim())
+        : [];
+      const fallbackIsComplete = fallbacks.length >= requiredCount && fallbacks.every(Boolean);
+      if (fallbackIsComplete) {
+        log(`Answer choices read from Kahoot data: ${fallbacks.length}`);
+        return fallbacks;
+      }
+
       const readChoices = () => {
         const findElements = domAdapter.findVisibleAnswerElements || domAdapter.findAnswerElements;
         const elements = findElements();
         if (elements.length < requiredCount) return null;
         const choices = elements.map(element => domAdapter.cleanButtonText(element));
-        const resultCount = Number(expectedCount) > 0 ? Number(expectedCount) : choices.length;
-        if (choices.length < requiredCount) return null;
-        if (choices.some(choice => !choice)) {
-          const fallbacks = Array.isArray(fallbackChoices) ? fallbackChoices.slice(0, resultCount) : [];
-          if (fallbacks.length < requiredCount || fallbacks.some(choice => !String(choice || '').trim())) return null;
-          return fallbacks;
+        if (choices.some(choice => !String(choice ?? '').trim())) {
+          const merged = choices.map((choice, index) => String(choice ?? '').trim() || fallbacks[index] || '');
+          if (merged.some(choice => !String(choice).trim())) return null;
+          return merged;
         }
-        return choices.slice(0, resultCount);
+        return choices;
       };
       const choices = await waitForDomResult(readChoices, {
         timeout: 4500,
         nonce,
-        settleMs: Number(expectedCount) > 0
-          ? (Array.isArray(fallbackChoices) && fallbackChoices.length >= requiredCount ? 160 : 180)
-          : 360
+        settleMs: Number(expectedCount) > 0 ? 240 : 500
       });
       if (choices) log(`Answer choices read from page: ${choices.length}`);
       return choices || [];

@@ -483,7 +483,8 @@ window.addEventListener('kahootQuestionParsed', async (event) => {
       currentSolveId = null;
       currentQuestion.choices = q.choices || [];
       questionState = 'waiting_for_choices';
-      updateStatus('Waiting for answer choices', `Kahoot has not rendered all ${expectedChoices} answer choices yet. No AI request was sent.`);
+      const requirement = expectedChoices > 0 ? `the ${expectedChoices} answer choices in Kahoot's question data` : 'at least two readable answer choices';
+      updateStatus('Waiting for answer choices', `Kahoot has not shown ${requirement} yet. No AI request was sent.`);
       return;
     }
     currentQuestion.choices = q.choices;
