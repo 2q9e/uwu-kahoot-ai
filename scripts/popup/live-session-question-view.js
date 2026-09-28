@@ -21,6 +21,24 @@ export function createLiveSessionQuestionView({
   getHasCurrentQuestion,
   setHasCurrentQuestion
 }) {
+  let liveStatusState = 'idle';
+  let readinessRetryToken = null;
+  let readinessRetryAvailable = false;
+  let readinessRetryPending = false;
+  let choiceReadinessActive = false;
+
+  function syncRetryButton() {
+    if (!retryAnswerBtn) return;
+    retryAnswerBtn.disabled = !canRetry();
+  }
+
+  function canRetry() {
+    const canRetryReadiness = readinessRetryAvailable && Boolean(readinessRetryToken) &&
+      !readinessRetryPending && liveStatusState !== 'processing';
+    const canRetryNormally = !choiceReadinessActive && liveStatusState !== 'processing' && liveStatusState !== 'waiting_for_choices';
+    return getHasCurrentQuestion() && !readinessRetryPending && (canRetryReadiness || canRetryNormally);
+  }
+
   function showHandoff(handoff) {
     if (!answerHandoff || !handoff?.stage) return;
     const provider = PROVIDER_LABELS[handoff.provider] || 'AI provider';
@@ -56,13 +74,25 @@ export function createLiveSessionQuestionView({
   }
 
   function showReadiness(readiness) {
-    if (!questionReadiness) return;
     if (!readiness?.choicesRequired) {
-      questionReadiness.textContent = '';
-      questionReadiness.classList.add('hidden');
-      questionReadiness.removeAttribute('data-ready');
+      choiceReadinessActive = false;
+      readinessRetryToken = null;
+      readinessRetryAvailable = false;
+      readinessRetryPending = false;
+      if (questionReadiness) {
+        questionReadiness.textContent = '';
+        questionReadiness.classList.add('hidden');
+        questionReadiness.removeAttribute('data-ready');
+      }
+      syncRetryButton();
       return;
     }
+    choiceReadinessActive = readiness.choicesReady !== true;
+    readinessRetryAvailable = readiness.recoveryExpired === true && typeof readiness.retryToken === 'string';
+    readinessRetryToken = readinessRetryAvailable ? readiness.retryToken : null;
+    readinessRetryPending = false;
+    syncRetryButton();
+    if (!questionReadiness) return;
     const expected = Math.max(2, Number(readiness.expectedChoiceCount) || 2);
     const received = Math.max(0, Number(readiness.dataChoiceCount) || 0);
     const visible = Math.max(0, Number(readiness.visibleChoiceCount) || 0);
@@ -79,16 +109,22 @@ export function createLiveSessionQuestionView({
       questionReadiness.textContent = `No answer choices received · checking the page for at least ${expected}`;
       questionReadiness.dataset.ready = 'false';
     }
+    if (readinessRetryAvailable) {
+      questionReadiness.textContent = `Choice check expired · found ${visible} of at least ${expected}. Try again to check the page; no AI request has been sent.`;
+      questionReadiness.dataset.ready = 'false';
+    }
     questionReadiness.classList.remove('hidden');
   }
 
   function setLiveStatus(state, label, detail = '') {
+    liveStatusState = state;
+    if (state === 'error' || state === 'processing') readinessRetryPending = false;
     if (liveStatus) {
       liveStatus.textContent = label;
       liveStatus.className = `live-status state-${state}`;
     }
     if (liveDetail) liveDetail.textContent = detail;
-    if (retryAnswerBtn) retryAnswerBtn.disabled = !getHasCurrentQuestion() || state === 'processing' || state === 'waiting_for_choices';
+    syncRetryButton();
   }
 
   function showQuestion(title, type, readiness) {
@@ -96,13 +132,13 @@ export function createLiveSessionQuestionView({
     setHasCurrentQuestion(true);
     liveEmpty?.classList.add('hidden');
     liveQuestion?.classList.remove('hidden');
-    if (retryAnswerBtn) retryAnswerBtn.disabled = false;
     const badge = type && TYPE_LABELS[type] ? `${TYPE_LABELS[type]} · ` : '';
     if (questionText) {
       questionText.textContent = badge + title;
       questionText.classList.add('active');
     }
     showReadiness(readiness);
+    syncRetryButton();
   }
 
   function showAnswer(answer) {
@@ -128,6 +164,7 @@ export function createLiveSessionQuestionView({
   }
 
   function setWaitingForChoices(readiness) {
+    showReadiness(readiness);
     if (answerText) {
       answerText.textContent = 'Waiting for Kahoot to show the answer options…';
       answerText.classList.remove('thinking', 'active');
@@ -140,13 +177,35 @@ export function createLiveSessionQuestionView({
       : received
         ? `${received} choice${received === 1 ? '' : 's'} arrived in Kahoot data. Checking the page for at least ${expected}; no AI request has been sent.`
         : `No choices arrived yet. Checking the page for at least ${expected}; no AI request has been sent.`;
-    setLiveStatus('waiting_for_choices', 'Waiting for answer options', detail);
-    showReadiness(readiness);
+    const expired = readiness?.recoveryExpired === true;
+    setLiveStatus('waiting_for_choices', expired ? 'Answer options not ready' : 'Waiting for answer options', detail);
+  }
+
+  function beginReadinessRetry() {
+    if (!readinessRetryAvailable || !readinessRetryToken) return null;
+    readinessRetryPending = true;
+    liveStatusState = 'waiting_for_choices';
+    if (answerText) {
+      answerText.textContent = 'Checking Kahoot for answer options again…';
+      answerText.classList.remove('thinking', 'active');
+    }
+    if (liveStatus) {
+      liveStatus.textContent = 'Checking answer options';
+      liveStatus.className = 'live-status state-waiting_for_choices';
+    }
+    if (liveDetail) liveDetail.textContent = 'Rechecking the current question. No AI request will be sent until the complete choices appear.';
+    syncRetryButton();
+    return readinessRetryToken;
   }
 
   function clearSelectedQuestion() {
     setHasCurrentQuestion(false);
-    if (retryAnswerBtn) retryAnswerBtn.disabled = true;
+    liveStatusState = 'idle';
+    choiceReadinessActive = false;
+    readinessRetryToken = null;
+    readinessRetryAvailable = false;
+    readinessRetryPending = false;
+    syncRetryButton();
     liveEmpty?.classList.remove('hidden');
     liveQuestion?.classList.add('hidden');
     if (questionReadiness) {
@@ -165,6 +224,9 @@ export function createLiveSessionQuestionView({
   return {
     clearAnswerHandoff,
     clearSelectedQuestion,
+    beginReadinessRetry,
+    canRetry,
+    getReadinessRetryToken: () => readinessRetryAvailable ? readinessRetryToken : null,
     setLiveStatus,
     setThinking,
     setWaitingForChoices,

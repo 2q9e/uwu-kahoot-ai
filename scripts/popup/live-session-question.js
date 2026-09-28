@@ -33,6 +33,9 @@ export function createLiveSessionQuestion({
   const {
     clearAnswerHandoff,
     clearSelectedQuestion,
+    beginReadinessRetry,
+    canRetry,
+    getReadinessRetryToken,
     setLiveStatus,
     setThinking,
     setWaitingForChoices,
@@ -138,18 +141,27 @@ export function createLiveSessionQuestion({
   }
 
   async function retryAnswer(tabSession) {
-    if (!hasCurrentQuestion) return;
+    if (!hasCurrentQuestion || !canRetry()) return;
+    const readinessRetryToken = getReadinessRetryToken();
+    const revisionAtStart = liveStateRevision;
     if (retryAnswerBtn) retryAnswerBtn.disabled = true;
-    setLiveStatus('processing', 'Trying again…', 'Sending the current question to the configured AI provider.');
+    if (readinessRetryToken) {
+      beginReadinessRetry();
+    } else {
+      setLiveStatus('processing', 'Trying again…', 'Sending the current question to the configured AI provider.');
+    }
     try {
       const tab = tabSession.getSelectedTab();
       if (!tab?.id) throw new Error('Choose an open Kahoot tab first.');
-      const result = await tabsApi.sendMessage(tab.id, { action: 'manualAnswer' });
+      const result = await tabsApi.sendMessage(tab.id, {
+        action: 'manualAnswer',
+        ...(readinessRetryToken ? { readinessRetryToken } : {})
+      });
       if (!result?.success) throw new Error(result?.message || 'Could not retry this question.');
     } catch (error) {
+      if (revisionAtStart !== liveStateRevision) return;
       recordDiagnostic?.('RETRY_REQUEST_FAILED', { stage: 'retry' });
       setLiveStatus('error', 'Could not retry', error.message || 'Refresh the Kahoot tab and try again.');
-      if (retryAnswerBtn) retryAnswerBtn.disabled = !hasCurrentQuestion;
     }
   }
 

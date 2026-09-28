@@ -127,7 +127,22 @@
         case 'manualAnswer':
           if (!state.currentQuestion) return false;
           if (state.questionState === 'waiting_for_choices') {
-            sendResponse({ success: false, message: 'Waiting for Kahoot to display the answer choices.' });
+            const readiness = state.currentQuestionReadiness;
+            const retryToken = readiness?.recoveryExpired === true ? readiness.retryToken : null;
+            if (!retryToken || request.readinessRetryToken !== retryToken) {
+              sendResponse({ success: false, message: 'Waiting for the current question’s answer choices.' });
+              break;
+            }
+            state.pendingRetryHash = null;
+            state.hasRetried = false;
+            state.lastSentHash = null;
+            global.dispatchEvent(new global.CustomEvent('kahootQuestionParsed', {
+              detail: {
+                ...state.currentQuestion,
+                choices: Array.isArray(state.currentQuestion.choices) ? [...state.currentQuestion.choices] : []
+              }
+            }));
+            sendResponse({ success: true, readinessRetry: true });
             break;
           }
           state.pendingRetryHash = null;

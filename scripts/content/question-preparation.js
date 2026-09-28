@@ -2,6 +2,7 @@
   'use strict';
 
   const CHOICE_QUESTION_TYPES = new Set(['quiz', 'true_false', 'multiple_select_quiz']);
+  const MAX_CHOICE_READINESS_ATTEMPTS = 3;
 
   function createQuestionPreparation(dependencies) {
     const {
@@ -61,6 +62,7 @@
       questionTransition
     }) {
       const requiredChoices = Math.max(2, expectedChoiceCount);
+      const retryToken = state.currentQuestionReadiness?.retryToken || createSolveId();
       updateStatus('Waiting for on-screen answers…', dataChoiceCount
         ? `Kahoot data includes ${dataChoiceCount} choice${dataChoiceCount === 1 ? '' : 's'}. Checking the page for the complete set before sending anything to AI.`
         : 'No answer choices have arrived yet. Checking the page before sending anything to AI.');
@@ -70,7 +72,9 @@
         dataChoiceCount,
         expectedChoiceCount: requiredChoices,
         visibleChoiceCount: 0,
-        choicesReady: false
+        choicesReady: false,
+        recoveryExpired: false,
+        retryToken
       };
       broadcastToPopup('updateQuestion', {
         question: { title: q.title, type: q.type, choices: q.choices || [] },
@@ -78,10 +82,20 @@
         readiness: state.currentQuestionReadiness
       });
 
-      const domChoices = await pollForAnswerChoices(expectedChoiceCount, choiceWaitNonce, q.choices, previousQuestionChoices, questionTransition);
-      if (choiceWaitNonce !== state.submitNonce || state.lastPreparedHash !== incomingHash) {
-        log('Discarding answer choices from an outdated question.');
-        return false;
+      let domChoices = [];
+      let readinessAttempt = 0;
+      while (readinessAttempt < MAX_CHOICE_READINESS_ATTEMPTS) {
+        readinessAttempt += 1;
+        domChoices = await pollForAnswerChoices(expectedChoiceCount, choiceWaitNonce, q.choices, previousQuestionChoices, questionTransition);
+        if (choiceWaitNonce !== state.submitNonce || state.lastPreparedHash !== incomingHash) {
+          log('Discarding answer choices from an outdated question.');
+          return false;
+        }
+        if (domChoices.length >= 2) break;
+        if (readinessAttempt < MAX_CHOICE_READINESS_ATTEMPTS) {
+          log(`Answer choices are still incomplete; retrying readiness check (${readinessAttempt}/${MAX_CHOICE_READINESS_ATTEMPTS}).`);
+          updateStatus('Still waiting for answer choices…', `The page has not shown a complete set yet. Checking again (${readinessAttempt + 1}/${MAX_CHOICE_READINESS_ATTEMPTS}); no AI request has been sent.`);
+        }
       }
       if (domChoices.length < 2) {
         state.lastPreparedHash = null;
@@ -93,7 +107,9 @@
           dataChoiceCount,
           expectedChoiceCount: requiredChoices,
           visibleChoiceCount: domChoices.length,
-          choicesReady: false
+          choicesReady: false,
+          recoveryExpired: true,
+          retryToken
         };
         recordDiagnostic('QUESTION_CHOICES_INCOMPLETE', {
           stage: 'detection',
@@ -106,7 +122,7 @@
           state: 'waiting_for_choices',
           readiness: state.currentQuestionReadiness
         });
-        updateStatus('Waiting for answer choices', `Kahoot data had ${dataChoiceCount} choice${dataChoiceCount === 1 ? '' : 's'}; the page currently shows ${domChoices.length}. At least ${requiredChoices} readable choices are needed. No AI request was sent.`);
+        updateStatus('Waiting for answer choices (recovery expired)', `After ${readinessAttempt} checks, Kahoot data had ${dataChoiceCount} choice${dataChoiceCount === 1 ? '' : 's'} and the page showed ${domChoices.length}. At least ${requiredChoices} readable choices are needed. No AI request was sent.`);
         return false;
       }
 
@@ -118,7 +134,9 @@
         dataChoiceCount,
         expectedChoiceCount: requiredChoices,
         visibleChoiceCount: q.choices.length,
-        choicesReady: true
+        choicesReady: true,
+        recoveryExpired: false,
+        retryToken
       };
       broadcastToPopup('updateQuestion', {
         question: { title: q.title, type: q.type, choices: q.choices },
@@ -197,7 +215,8 @@
         dataChoiceCount,
         expectedChoiceCount: isChoiceQuestion ? Math.max(2, expectedChoiceCount) : 0,
         visibleChoiceCount: 0,
-        choicesReady: !isChoiceQuestion
+        choicesReady: !isChoiceQuestion,
+        ...(isChoiceQuestion ? { recoveryExpired: false, retryToken: createSolveId() } : {})
       };
       advanceSubmitNonce();
       const preparationNonce = state.submitNonce;
