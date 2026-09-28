@@ -64,7 +64,48 @@ export function createPopupSettingsController() {
   let latestPluginEnabled = true;
   let pluginStateLoaded = false;
   let pluginTogglePending = false;
+  const latestPreferenceChanges = {};
   const providerKeyLoadErrors = new Set();
+
+  const PREFERENCE_NORMALIZERS = {
+    highlightOption: value => value !== false,
+    autoClickOption: value => value !== false,
+    pinHighlightOption: value => value !== false,
+    pinAutoClickOption: value => !!value,
+    silentMode: value => !!value,
+    answerDelay: value => {
+      const delay = Number(value ?? 0);
+      return Number.isFinite(delay) ? Math.min(30, Math.max(0, delay)) : 0;
+    },
+    aiFallbackEnabled: value => value !== false
+  };
+
+  function applyPreferenceValue(key, value) {
+    currentSettings[key] = value;
+    const checkbox = {
+      highlightOption: highlightCb,
+      autoClickOption: autoclickCb,
+      pinHighlightOption: pinHighlightCb,
+      pinAutoClickOption: pinAutoclickCb,
+      silentMode: silentCb,
+      aiFallbackEnabled: fallbackCb
+    }[key];
+    if (checkbox) checkbox.checked = value;
+    if (key === 'answerDelay') {
+      if (delaySlider) delaySlider.value = value;
+      updateDelayLabel(value);
+    }
+    if (key === 'aiFallbackEnabled') updateApiStatus();
+  }
+
+  function getCurrentPreferenceValues(settings) {
+    return Object.fromEntries(Object.entries(PREFERENCE_NORMALIZERS).map(([key, normalize]) => [
+      key,
+      Object.hasOwn(latestPreferenceChanges, key)
+        ? latestPreferenceChanges[key]
+        : normalize(settings[key])
+    ]));
+  }
 
   function setProviderKeyLoadStatus(provider, loaded) {
     if (loaded) providerKeyLoadErrors.delete(provider);
@@ -164,8 +205,10 @@ export function createPopupSettingsController() {
     const privateEntries = await Promise.all(Object.keys(PROVIDERS).map(async provider =>
       [provider, await getProviderConfigApiKeys(provider)]
     ));
+    const preferenceValues = getCurrentPreferenceValues(settings);
     currentSettings = {
       ...settings,
+      ...preferenceValues,
       pluginEnabled: pluginRevisionAtRead === pluginSettingRevision
         ? settings.pluginEnabled !== false
         : latestPluginEnabled,
@@ -175,17 +218,7 @@ export function createPopupSettingsController() {
     renderPluginEnabled(currentSettings.pluginEnabled);
     apiSettingsState = 'ready';
 
-    if (highlightCb) highlightCb.checked = settings.highlightOption !== false;
-    if (autoclickCb) autoclickCb.checked = settings.autoClickOption !== false;
-    if (pinHighlightCb) pinHighlightCb.checked = settings.pinHighlightOption !== false;
-    if (pinAutoclickCb) pinAutoclickCb.checked = !!settings.pinAutoClickOption;
-    if (silentCb) silentCb.checked = !!settings.silentMode;
-    if (fallbackCb) fallbackCb.checked = settings.aiFallbackEnabled !== false;
-
-    const storedDelay = Number(settings.answerDelay ?? 0);
-    const delay = Number.isFinite(storedDelay) ? Math.min(30, Math.max(0, storedDelay)) : 0;
-    if (delaySlider) delaySlider.value = delay;
-    updateDelayLabel(delay);
+    for (const [key, value] of Object.entries(preferenceValues)) applyPreferenceValue(key, value);
 
     const storedProvider = settings.aiProvider;
     currentProvider = PROVIDERS[storedProvider] ? storedProvider : DEFAULT_AI_PROVIDER;
@@ -258,10 +291,18 @@ export function createPopupSettingsController() {
     });
 
     chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName !== 'sync' || !Object.hasOwn(changes, 'pluginEnabled')) return;
-      pluginSettingRevision += 1;
-      currentSettings.pluginEnabled = changes.pluginEnabled.newValue !== false;
-      renderPluginEnabled(currentSettings.pluginEnabled);
+      if (areaName !== 'sync') return;
+      if (Object.hasOwn(changes, 'pluginEnabled')) {
+        pluginSettingRevision += 1;
+        currentSettings.pluginEnabled = changes.pluginEnabled.newValue !== false;
+        renderPluginEnabled(currentSettings.pluginEnabled);
+      }
+      for (const [key, normalize] of Object.entries(PREFERENCE_NORMALIZERS)) {
+        if (!Object.hasOwn(changes, key)) continue;
+        const value = normalize(changes[key].newValue);
+        latestPreferenceChanges[key] = value;
+        applyPreferenceValue(key, value);
+      }
     });
 
     wirePreferenceControls({
@@ -276,6 +317,7 @@ export function createPopupSettingsController() {
       delaySlider,
       persistSync,
       updateDelayLabel,
+      getSavedPreferenceValue: key => PREFERENCE_NORMALIZERS[key](currentSettings[key]),
       getSavedFallbackValue: () => currentSettings.aiFallbackEnabled,
       onFallbackSaveFailed: () => setProviderSaveStatus('Fallback preference was not saved.', 'error'),
       onFallbackSaved: nextValue => {
