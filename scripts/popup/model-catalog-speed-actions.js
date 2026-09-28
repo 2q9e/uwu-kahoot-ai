@@ -26,20 +26,24 @@ export function createModelCatalogSpeedActions({
   renderModelCatalog
 }) {
   async function measureGeminiSpeed(model, button) {
-    const key = await getCurrentProviderKey('gemini');
     const isCurrentProvider = () => getCurrentProvider() === 'gemini';
-    if (!key) {
-      if (isCurrentProvider()) setAiFeedback('Enter or save your Google AI Studio key before measuring speed.', 'error');
-      return;
-    }
-    if (!isCurrentProvider()) return;
-    if (!confirmPaidSpeedCheck('Google AI Studio')) {
-      setAiFeedback('Speed check canceled; no requests were sent.');
-      return;
-    }
+    if (!isCurrentProvider() || button.disabled) return;
     button.disabled = true;
-    button.textContent = 'Measuring 1/3…';
+    button.textContent = 'Checking key…';
+
+    let key = '';
     try {
+      key = await getCurrentProviderKey('gemini');
+      if (!isCurrentProvider()) return;
+      if (!key) {
+        setAiFeedback('Enter or save your Google AI Studio key before measuring speed.', 'error');
+        return;
+      }
+      if (!confirmPaidSpeedCheck('Google AI Studio')) {
+        setAiFeedback('Speed check canceled; no requests were sent.');
+        return;
+      }
+      button.textContent = 'Measuring 1/3…';
       const result = await measureGeminiModel(key, model.id, (done, total) => {
         if (isCurrentProvider() && button.isConnected) {
           button.textContent = done >= total ? 'Summarizing…' : `Measuring ${done + 1}/${total}…`;
@@ -61,9 +65,12 @@ export function createModelCatalogSpeedActions({
       await renderProviderQuota('gemini', key);
     } catch (error) {
       if (isCurrentProvider()) setAiFeedback(error.message || 'Speed check failed.', 'error');
-      await renderProviderQuota('gemini', key);
+      if (key) await renderProviderQuota('gemini', key);
     } finally {
-      if (button.isConnected) button.disabled = false;
+      if (button.isConnected) {
+        button.disabled = false;
+        button.textContent = 'Measure speed';
+      }
     }
   }
 
@@ -105,22 +112,25 @@ export function createModelCatalogSpeedActions({
 
   async function measureOpenAISpeed(model, button) {
     const isCurrentProvider = () => getCurrentProvider() === 'openai';
-    if (!isCurrentProvider()) return;
-    const key = await getCurrentProviderKey('openai');
-    if (!isCurrentProvider()) return;
-    if (!key) {
-      setAiFeedback('Enter or save an OpenAI key before measuring speed.', 'error');
-      return;
-    }
-    if (!confirmPaidSpeedCheck('OpenAI')) {
-      setAiFeedback('Speed check canceled; no requests were sent.');
-      return;
-    }
+    if (!isCurrentProvider() || button.disabled) return;
     button.disabled = true;
-    button.textContent = 'Measuring 1/3…';
+    button.textContent = 'Checking key…';
     try {
+      const key = await getCurrentProviderKey('openai');
+      if (!isCurrentProvider()) return;
+      if (!key) {
+        setAiFeedback('Enter or save an OpenAI key before measuring speed.', 'error');
+        return;
+      }
+      if (!confirmPaidSpeedCheck('OpenAI')) {
+        setAiFeedback('Speed check canceled; no requests were sent.');
+        return;
+      }
+      button.textContent = 'Measuring 1/3…';
       const result = await measureOpenAIModel(key, model.id, (done, total) => {
-        button.textContent = done >= total ? 'Summarizing…' : `Measuring ${done + 1}/${total}…`;
+        if (isCurrentProvider() && button.isConnected) {
+          button.textContent = done >= total ? 'Summarizing…' : `Measuring ${done + 1}/${total}…`;
+        }
       });
       const sampledAt = new Date().toISOString();
       const speedRecord = {
