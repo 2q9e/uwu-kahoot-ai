@@ -194,9 +194,9 @@ export async function callVisionOnce(provider, apiKey, visionModel, systemPrompt
         { type: 'text', text: textPrompt },
         { type: 'image_url', image_url: { url: imageUrl, detail: 'high' } }
       ]}
-    ],
-    temperature
+    ]
   };
+  if (!isOpenAIReasoning) body.temperature = temperature;
   if (provider === 'openrouter') {
     body.provider = { sort: 'throughput' };
     if (await openRouterModelSupportsReasoning(visionModel)) body.reasoning = { effort: openRouterReasoningEffort(effort) };
