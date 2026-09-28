@@ -70,8 +70,8 @@ a { color: inherit; }
   position: relative;
   display: block;
   width: 100%;
-  height: 136vh;
-  min-height: 980px;
+  height: 112vh;
+  min-height: 840px;
   margin: 0;
   padding: 0;
   isolation: isolate;
@@ -379,7 +379,7 @@ body.motion-active .card-front::after { animation: card-sheen 8s ease-in-out inf
   .glass-card { backdrop-filter: blur(8px); box-shadow: 0 20px 60px rgba(0,0,0,.46), inset 0 1px rgba(255,255,255,.09); }
   .stage-orb { filter: blur(3px); }
   .stage-particles i:nth-child(n + 5) { display: none; }
-  .dashboard-hero { height: 128vh; height: 128svh; min-height: 900px; }
+  .dashboard-hero { height: 112vh; height: 112svh; min-height: 800px; }
   .hero-sticky { top: var(--dashboard-header-height, 66px); grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); width: calc(100% - 30px); max-width: 620px; height: calc(100svh - var(--dashboard-header-height, 66px)); min-height: 560px; padding: 36px 5px 84px; }
   .hero-copy { padding-bottom: 0; }
   .hero-copy h1 { font-size: clamp(46px, 12vw, 70px); }
@@ -406,7 +406,7 @@ body.motion-active .card-front::after { animation: card-sheen 8s ease-in-out inf
   .view-button { min-height: 28px; padding-inline: 10px; font-size: 10px; }
   .dashboard-brand strong { font-size: 12px; }
   .dashboard-brand small { letter-spacing: .8px; }
-  .dashboard-hero { height: 126vh; height: 126svh; min-height: 820px; }
+  .dashboard-hero { height: 116vh; height: 116svh; min-height: 760px; }
   .hero-sticky { top: var(--dashboard-header-height, 104px); height: calc(100svh - var(--dashboard-header-height, 104px)); min-height: 560px; padding-top: 28px; }
   .hero-stage { height: min(400px, 48svh); min-height: 330px; margin-inline: -18px; }
   .card-front { top: 23%; left: 15%; width: 78%; min-height: 290px; padding: 17px; }
