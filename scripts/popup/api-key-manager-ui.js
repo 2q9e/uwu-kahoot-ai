@@ -7,7 +7,7 @@ import {
 import { maskApiKey } from '../core/api-key-manager.js';
 import { validateProviderApiKey } from '../core/api-key-validation.js';
 
-export function createApiKeyManager({ getCurrentProvider, getCurrentSettings, setAiFeedback, updateApiStatus }) {
+export function createApiKeyManager({ getCurrentProvider, getCurrentSettings, setAiFeedback, updateApiStatus, onProviderKeysLoaded, onProviderKeysLoadFailed }) {
   const apiKeyList = document.getElementById('apiKeyList');
   const apiKeySummary = document.getElementById('apiKeySummary');
   const localConfigKeysEl = document.getElementById('localConfigKeys');
@@ -55,7 +55,19 @@ function makeManagedKeyValue(secret, label) {
 async function render(provider = getCurrentProvider()) {
   if (!apiKeyList || !localConfigKeysEl) return;
   const renderToken = ++renderTokenCounter;
-  const records = await getProviderApiKeyEntries(provider);
+  let records;
+  try {
+    records = await getProviderApiKeyEntries(provider);
+  } catch (error) {
+    if (renderToken === renderTokenCounter && provider === getCurrentProvider()) {
+      apiKeyList.replaceChildren();
+      localConfigKeysEl.replaceChildren();
+      if (apiKeySummary) apiKeySummary.textContent = 'Could not load keys for this provider.';
+      if (testEnabledKeysButton) testEnabledKeysButton.disabled = true;
+      onProviderKeysLoadFailed?.(provider);
+    }
+    throw error;
+  }
   if (renderToken !== renderTokenCounter || provider !== getCurrentProvider()) return;
   const settings = getCurrentSettings();
   const localKeys = settings.privateApiKeys?.[provider] || [];
@@ -154,7 +166,8 @@ async function render(provider = getCurrentProvider()) {
       } catch (error) {
         setAiFeedback(error.message || 'Could not update the key label.', 'error');
       }
-      await render(provider);
+      try { await render(provider); }
+      catch (error) { setAiFeedback(error.message || 'Could not reload saved keys.', 'error'); }
     });
     enabled.addEventListener('change', async () => {
       enabled.disabled = true;
@@ -164,7 +177,8 @@ async function render(provider = getCurrentProvider()) {
       } catch (_) {
         setAiFeedback('Could not update this key. Try again.', 'error');
       }
-      await render(provider);
+      try { await render(provider); }
+      catch (error) { setAiFeedback(error.message || 'Could not reload saved keys.', 'error'); }
     });
     test.addEventListener('click', async () => {
       test.disabled = true;
@@ -264,6 +278,7 @@ async function render(provider = getCurrentProvider()) {
       localConfigKeysEl.append(card);
     });
   }
+  onProviderKeysLoaded?.(provider);
   updateApiStatus();
 }
 

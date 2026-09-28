@@ -145,7 +145,7 @@
         <section id="providerPanel" class="api-panel" aria-labelledby="providerPanelTitle">
           <div class="api-panel-heading"><div><span class="section-kicker">ROUTING</span><h3 id="providerPanelTitle">Provider and fallback</h3></div></div>
           <label class="field-label" for="aiProvider">Preferred provider</label>
-          <select id="aiProvider" class="field-select" aria-label="AI provider">
+          <select id="aiProvider" class="field-select" aria-label="AI provider" disabled>
             <option value="openai">OpenAI</option>
             <option value="gemini">Google AI Studio (Gemini)</option>
             <option value="openrouter">OpenRouter</option>
@@ -274,7 +274,7 @@
           <div class="api-panel-heading"><div><span class="section-kicker">SAVE CHANGES</span><h3 id="saveSettingsTitle">Save provider setup</h3></div></div>
         <div id="providerQuota" class="provider-quota" role="status" aria-live="polite"></div>
         <div class="openai-actions">
-          <button id="saveApi" class="btn-save" type="button">Save</button>
+          <button id="saveApi" class="btn-save" type="button" disabled>Save</button>
         </div>
         <p id="aiFeedback" class="settings-feedback" role="status" aria-live="polite"></p>
         <div id="keyStorageNote" class="openai-note">Provider credentials are not synced or encrypted by this extension; anyone with access to this browser profile or extension storage may be able to read them. “Test key” makes a no-generation request to the provider. Keys from the optional local config file are imported on first use; removing a manager entry does not erase the copy in that file.</div>

@@ -7,9 +7,13 @@ import { CATALOG_STORAGE_PREFIX, createProviderModelCatalog } from './provider-m
 
 const MODEL_REASONING_STORAGE_KEY = 'modelReasoningEffort';
 
-export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, providers, defaultProvider, deprecatedModels, setAiFeedback, persistSync, renderApiKeyManager }) {
+export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, providers, defaultProvider, deprecatedModels, setAiFeedback, persistSync, renderApiKeyManager, setProviderKeyLoadStatus }) {
+  const providerModelDrafts = new Map();
+  let sharedModelDraft = null;
+  let providerLoadToken = 0;
   const modelInput = document.getElementById('aiModel');
   const visionInput = document.getElementById('aiVisionModel');
+  const providerSelect = document.getElementById('aiProvider');
   const reasoningSelect = document.getElementById('reasoningEffort');
   const fastBinaryCheckbox = document.getElementById('fastBinaryAnswers');
   const fastBinaryModelSelect = document.getElementById('fastBinaryModel');
@@ -34,6 +38,35 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
   const catalogHelp = document.getElementById('catalogHelp');
   const modelCatalogList = document.getElementById('modelCatalogList');
   const showMoreModelsBtn = document.getElementById('showMoreModels');
+  const saveSettingsButton = document.getElementById('saveApi');
+  const apiKeyList = document.getElementById('apiKeyList');
+  const apiKeySummary = document.getElementById('apiKeySummary');
+  const localConfigKeys = document.getElementById('localConfigKeys');
+  const testEnabledKeysButton = document.getElementById('testEnabledApiKeys');
+  const providerFormPanels = ['apiKeysPanel', 'modelSettingsPanel', 'fastBinaryPanel', 'backupModelsPanel', 'modelCatalogPanel']
+    .map(id => document.getElementById(id))
+    .filter(Boolean);
+  let providerFieldsLoading = false;
+
+  function setProviderFieldsLoading(loading) {
+    providerFieldsLoading = Boolean(loading);
+    for (const panel of providerFormPanels) {
+      panel.inert = providerFieldsLoading;
+      if (providerFieldsLoading) panel.setAttribute('aria-busy', 'true');
+      else panel.removeAttribute('aria-busy');
+    }
+    if (providerSelect) providerSelect.disabled = providerFieldsLoading;
+    if (saveSettingsButton) saveSettingsButton.disabled = providerFieldsLoading;
+  }
+
+  function clearProviderKeyList(message) {
+    apiKeyList?.replaceChildren();
+    localConfigKeys?.replaceChildren();
+    if (apiKeySummary) apiKeySummary.textContent = message;
+    if (testEnabledKeysButton) testEnabledKeysButton.disabled = true;
+  }
+
+  setProviderFieldsLoading(true);
 
   function setCatalogStatus(message, state = '') {
     if (!catalogStatus) return;
@@ -104,9 +137,22 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
     const savedFastLane = settings.fastBinaryAnswersEnabled !== false;
     const fastLane = fastBinaryCheckbox?.checked === true;
     const savedEffort = normalizeReasoningEffort(settings[MODEL_REASONING_STORAGE_KEY]);
-    const dirty = model !== savedModel || vision !== savedVision || effort !== savedEffort ||
-      fastModel !== savedFastModel || fastLane !== savedFastLane ||
+    const providerFieldsDirty = model !== savedModel || vision !== savedVision || fastModel !== savedFastModel ||
       JSON.stringify(currentBackups) !== JSON.stringify(savedBackups);
+    if (providerFieldsDirty) {
+      providerModelDrafts.set(provider, {
+        model,
+        visionModel: vision,
+        fastModel,
+        backupModels: [...currentBackups]
+      });
+    } else {
+      providerModelDrafts.delete(provider);
+    }
+    sharedModelDraft = effort !== savedEffort || fastLane !== savedFastLane
+      ? { reasoningEffort: effort, fastBinaryAnswersEnabled: fastLane }
+      : null;
+    const dirty = providerFieldsDirty || sharedModelDraft !== null;
     if (modelSelectionState) {
       modelSelectionState.textContent = dirty ? 'Unsaved changes' : 'Saved setup';
       modelSelectionState.classList.toggle('unsaved', dirty);
@@ -132,7 +178,8 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
     onSelectionChange: refreshSelectionSummary,
     onModelsUpdated: (provider, models) => {
       if (provider === getCurrentProvider()) {
-        populateFastModelOptions(provider, models, getCurrentSettings()[providers[provider]?.fastModelKey]);
+        const savedFastModel = getCurrentSettings()[providers[provider]?.fastModelKey];
+        populateFastModelOptions(provider, models, fastBinaryModelSelect?.value ?? savedFastModel);
       }
     },
     renderProviderQuota: providerQuotaUi.renderProviderQuota
@@ -196,7 +243,8 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
     resetVisibleModelLimit: modelRenderer.resetVisibleModelLimit,
     populateFastModelOptions: (provider, models) => {
       if (provider !== getCurrentProvider()) return;
-      populateFastModelOptions(provider, models, getCurrentSettings()[providers[provider]?.fastModelKey]);
+      const savedFastModel = getCurrentSettings()[providers[provider]?.fastModelKey];
+      populateFastModelOptions(provider, models, fastBinaryModelSelect?.value ?? savedFastModel);
     }
   });
 
@@ -299,70 +347,103 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
     await providerCatalog.loadGeminiSpeedMeasurements();
     if (getCurrentProvider() === 'gemini') {
       const provider = providers.gemini;
-      populateFastModelOptions('gemini', providerCatalog.getModels('gemini'), getCurrentSettings()[provider.fastModelKey]);
+      const savedFastModel = getCurrentSettings()[provider.fastModelKey];
+      populateFastModelOptions('gemini', providerCatalog.getModels('gemini'), fastBinaryModelSelect?.value ?? savedFastModel);
     }
   }
 
   async function loadProviderFields(provider) {
-    const config = providers[provider] || providers[defaultProvider];
-    if (modelSearchInput) modelSearchInput.value = '';
-    setCatalogStatus('Loading saved model catalog…', 'loading');
-    providerQuotaUi.setLoading();
-    if (fastBinaryCheckbox) fastBinaryCheckbox.checked = getCurrentSettings().fastBinaryAnswersEnabled !== false;
-    if (modelInput) {
-      let model = (getCurrentSettings()[config.modelKey] || config.defaultModel).trim();
-      if (provider === 'openai' && deprecatedModels.has(model.toLowerCase())) model = config.defaultModel;
-      modelInput.value = model;
-      modelInput.readOnly = provider === 'openrouter';
-    }
-    if (visionInput) {
-      let visionModel = (getCurrentSettings()[config.visionKey] || config.defaultVision).trim();
-      if (provider === 'openai' && deprecatedModels.has(visionModel.toLowerCase())) visionModel = config.defaultVision;
-      visionInput.value = visionModel;
-      visionInput.readOnly = provider === 'openrouter';
-    }
-    if (provider === 'openrouter') {
-      if (primaryModelHelp) primaryModelHelp.textContent = 'Choose a listed free text model in the catalog below. Model IDs are locked to prevent accidentally routing quiz questions to paid models.';
-      if (visionModelHelp) visionModelHelp.textContent = 'Choose a listed free model marked Image input in the catalog below.';
-    } else {
-      if (primaryModelHelp) primaryModelHelp.textContent = 'Choose a catalog model below or enter a provider model ID. This model handles normal text questions.';
-      if (visionModelHelp) visionModelHelp.textContent = 'Used when a Kahoot question includes an image. Pick a catalog model marked Image input.';
-    }
-    if (catalogHelp) catalogHelp.textContent = provider === 'openrouter'
-      ? 'OpenRouter TPS is the best free endpoint’s provider-reported 30-minute p50; it is metadata, not a live prompt test.'
-      : provider === 'gemini'
-        ? 'Measure speed runs three short streams, uses Google candidate token counts, and reports median stream TPS plus first-token time. Quota or billing may apply.'
-        : 'Measure speed runs three short streams, uses OpenAI token-level stream data, and reports median stream TPS plus first-token time. Models without that data cannot be measured. Charges may apply.';
+    const loadToken = ++providerLoadToken;
+    const isCurrentLoad = () => loadToken === providerLoadToken && provider === getCurrentProvider();
+    setProviderFieldsLoading(true);
+    try {
+      const config = providers[provider] || providers[defaultProvider];
+      const settings = getCurrentSettings();
+      const draft = providerModelDrafts.get(provider);
+      if (modelSearchInput) modelSearchInput.value = '';
+      setCatalogStatus('Loading saved model catalog…', 'loading');
+      providerQuotaUi.setLoading();
+      clearProviderKeyList('Loading keys for this provider…');
+      if (fastBinaryCheckbox) fastBinaryCheckbox.checked = sharedModelDraft?.fastBinaryAnswersEnabled ?? settings.fastBinaryAnswersEnabled !== false;
+      if (reasoningSelect) reasoningSelect.value = sharedModelDraft?.reasoningEffort ?? normalizeReasoningEffort(settings[MODEL_REASONING_STORAGE_KEY]);
+      if (modelInput) {
+        let model = String(draft?.model ?? settings[config.modelKey] ?? config.defaultModel).trim();
+        if (provider === 'openai' && deprecatedModels.has(model.toLowerCase())) model = config.defaultModel;
+        modelInput.value = model;
+        modelInput.readOnly = provider === 'openrouter';
+      }
+      if (visionInput) {
+        let visionModel = String(draft?.visionModel ?? settings[config.visionKey] ?? config.defaultVision).trim();
+        if (provider === 'openai' && deprecatedModels.has(visionModel.toLowerCase())) visionModel = config.defaultVision;
+        visionInput.value = visionModel;
+        visionInput.readOnly = provider === 'openrouter';
+      }
+      if (provider === 'openrouter') {
+        if (primaryModelHelp) primaryModelHelp.textContent = 'Choose a listed free text model in the catalog below. Model IDs are locked to prevent accidentally routing quiz questions to paid models.';
+        if (visionModelHelp) visionModelHelp.textContent = 'Choose a listed free model marked Image input in the catalog below.';
+      } else {
+        if (primaryModelHelp) primaryModelHelp.textContent = 'Choose a catalog model below or enter a provider model ID. This model handles normal text questions.';
+        if (visionModelHelp) visionModelHelp.textContent = 'Used when a Kahoot question includes an image. Pick a catalog model marked Image input.';
+      }
+      if (catalogHelp) catalogHelp.textContent = provider === 'openrouter'
+        ? 'OpenRouter TPS is the best free endpoint’s provider-reported 30-minute p50; it is metadata, not a live prompt test.'
+        : provider === 'gemini'
+          ? 'Measure speed runs three short streams, uses Google candidate token counts, and reports median stream TPS plus first-token time. Quota or billing may apply.'
+          : 'Measure speed runs three short streams, uses OpenAI token-level stream data, and reports median stream TPS plus first-token time. Models without that data cannot be measured. Charges may apply.';
 
-    const entries = await getProviderApiKeyEntries(provider);
-    const settings = getCurrentSettings();
-    settings.managedApiKeys = { ...(settings.managedApiKeys || {}), [provider]: entries };
-    await renderApiKeyManager(provider);
-    const hasSavedFallbackKey = Object.keys(providers).some(fallbackProvider =>
-      fallbackProvider !== provider && (settings.managedApiKeys?.[fallbackProvider] || []).some(entry => entry.enabled)
-    );
-    const hasPrivateFallbackKey = Object.entries(settings.privateApiKeys || {}).some(([fallbackProvider, keys]) =>
-      fallbackProvider !== provider && !!keys.length
-    );
-    const primaryModel = modelInput?.value || config.defaultModel;
-    const backups = normalizeBackupModels(settings[config.backupKey], primaryModel);
-    backupModelUi.populateBackupSlots(providerCatalog.getModels(provider), backups, primaryModel);
-    await providerCatalog.restoreProviderCatalog(provider);
-    updateModelSuggestions(providerCatalog.getModels(provider));
-    populateFastModelOptions(provider, providerCatalog.getModels(provider), settings[config.fastModelKey]);
-    await providerQuotaUi.renderProviderQuota(provider);
-    refreshSelectionSummary();
-    return entries.some(entry => entry.enabled) || !!settings.privateApiKeys?.[provider]?.length ||
-      (settings.aiFallbackEnabled !== false && (hasSavedFallbackKey || hasPrivateFallbackKey));
+      const primaryModel = modelInput?.value || config.defaultModel;
+      const backups = draft?.backupModels ?? normalizeBackupModels(settings[config.backupKey], primaryModel);
+      backupModelUi.populateBackupSlots(providerCatalog.getModels(provider), backups, primaryModel);
+      populateFastModelOptions(provider, providerCatalog.getModels(provider), draft?.fastModel ?? settings[config.fastModelKey]);
+
+      let entries;
+      try {
+        entries = await getProviderApiKeyEntries(provider);
+        if (!isCurrentLoad()) return false;
+        settings.managedApiKeys = { ...(settings.managedApiKeys || {}), [provider]: entries };
+        await renderApiKeyManager(provider);
+        if (!isCurrentLoad()) return false;
+      } catch (_) {
+        if (!isCurrentLoad()) return false;
+        clearProviderKeyList('Could not load keys for this provider.');
+        setProviderKeyLoadStatus?.(provider, false);
+        setAiFeedback('Could not load the selected provider’s saved keys. Check extension storage and try again.', 'error');
+        refreshSelectionSummary();
+        return false;
+      }
+      const hasSavedFallbackKey = Object.keys(providers).some(fallbackProvider =>
+        fallbackProvider !== provider && (settings.managedApiKeys?.[fallbackProvider] || []).some(entry => entry.enabled)
+      );
+      const hasPrivateFallbackKey = Object.entries(settings.privateApiKeys || {}).some(([fallbackProvider, keys]) =>
+        fallbackProvider !== provider && !!keys.length
+      );
+      await providerCatalog.restoreProviderCatalog(provider, isCurrentLoad, Boolean(draft));
+      if (!isCurrentLoad()) return false;
+      updateModelSuggestions(providerCatalog.getModels(provider));
+      const loadedPrimaryModel = modelInput?.value || config.defaultModel;
+      const loadedBackups = draft?.backupModels ?? normalizeBackupModels(settings[config.backupKey], loadedPrimaryModel);
+      backupModelUi.populateBackupSlots(providerCatalog.getModels(provider), loadedBackups, loadedPrimaryModel);
+      populateFastModelOptions(provider, providerCatalog.getModels(provider), draft?.fastModel ?? settings[config.fastModelKey]);
+      await providerQuotaUi.renderProviderQuota(provider);
+      if (!isCurrentLoad()) return false;
+      refreshSelectionSummary();
+      return entries.some(entry => entry.enabled) || !!settings.privateApiKeys?.[provider]?.length ||
+        (settings.aiFallbackEnabled !== false && (hasSavedFallbackKey || hasPrivateFallbackKey));
+    } finally {
+      if (isCurrentLoad()) setProviderFieldsLoading(false);
+    }
   }
 
   return {
+    captureCurrentDraft: refreshSelectionSummary,
     currentBackupSelection: backupModelUi.currentBackupSelection,
     getFormValues,
     getModels: providerCatalog.getModels,
     isFreeOpenRouterModel,
     loadProviderFields,
     loadGeminiSpeedMeasurements,
+    isProviderFieldsLoading: () => providerFieldsLoading,
+    setProviderFieldsLoading,
     persistBackupSlots: backupModelUi.persistBackupSlots,
     populateBackupSlots: backupModelUi.populateBackupSlots,
     renderModelCatalog: () => {

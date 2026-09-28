@@ -96,7 +96,8 @@ export function createProviderModelCatalog({
     return false;
   }
 
-  async function restoreProviderCatalog(provider) {
+  async function restoreProviderCatalog(provider, isCurrentLoad = () => provider === getCurrentProvider(), preserveDraft = false) {
+    if (!isCurrentLoad()) return;
     if (providerCatalogs[provider]) {
       populateBackupSlots(providerCatalogs[provider], currentBackupSelection(), modelInput?.value || '');
       renderModelCatalog();
@@ -105,21 +106,28 @@ export function createProviderModelCatalog({
     try {
       const cacheKey = `${CATALOG_STORAGE_PREFIX}${provider}`;
       const cached = (await chrome.storage.local.get(cacheKey))[cacheKey];
+      if (!isCurrentLoad()) return;
       if (Array.isArray(cached?.models)) {
         const models = provider === 'openai' ? await restoreOpenAISpeedReadings(cached.models) : cached.models;
+        if (!isCurrentLoad()) return;
         providerCatalogs[provider] = models;
         populateFastModelOptions(provider, models);
-        if (provider === 'openrouter') await adoptFastestOpenRouterModel(models);
-        populateBackupSlots(models, getCurrentSettings()[providers[provider].backupKey], modelInput?.value || '');
+        if (provider === 'openrouter' && !preserveDraft) await adoptFastestOpenRouterModel(models);
+        if (!isCurrentLoad()) return;
+        populateBackupSlots(models, currentBackupSelection(), modelInput?.value || '');
         renderModelCatalog();
         const stamp = cached.fetchedAt ? new Date(cached.fetchedAt).toLocaleString() : 'previously';
         setCatalogStatus(`${cached.models.length} cached models · updated ${stamp}. Refresh for the current list.`, 'muted');
         return;
       }
     } catch (_) {  }
+    if (!isCurrentLoad()) return;
     providerCatalogs[provider] = [];
     populateFastModelOptions(provider, []);
-    populateBackupSlots([], getCurrentSettings()[providers[provider].backupKey], modelInput?.value || '');
+    const backups = preserveDraft
+      ? currentBackupSelection()
+      : getCurrentSettings()[providers[provider].backupKey];
+    populateBackupSlots([], backups, modelInput?.value || '');
     renderModelCatalog();
     setCatalogStatus('No catalog loaded yet.');
   }

@@ -5,6 +5,7 @@ export function createProviderQuotaUi({ providers, getProviderKey }) {
   const providerQuota = document.getElementById('providerQuota');
   const OPENROUTER_QUOTA_URL = 'https://openrouter.ai/account';
   const GEMINI_QUOTA_URL = 'https://aistudio.google.com/rate-limit?timeRange=last-28-days';
+  let renderToken = 0;
 
   function quotaLink(url, label) {
     const link = document.createElement('a');
@@ -44,11 +45,16 @@ export function createProviderQuotaUi({ providers, getProviderKey }) {
 
   async function renderProviderQuota(provider, suppliedKey = '') {
     if (!providerQuota) return;
+    const token = ++renderToken;
+    const isCurrentRender = () => token === renderToken;
     if (provider === 'gemini') {
       try {
         const stored = await chrome.storage.local.get(PROVIDER_USAGE_STORAGE_KEY);
+        if (!isCurrentRender()) return;
         renderGeminiQuota(stored[PROVIDER_USAGE_STORAGE_KEY]?.gemini || {});
-      } catch (_) { renderGeminiQuota({}, false); }
+      } catch (_) {
+        if (isCurrentRender()) renderGeminiQuota({}, false);
+      }
       return;
     }
     providerQuota.replaceChildren();
@@ -73,6 +79,7 @@ export function createProviderQuotaUi({ providers, getProviderKey }) {
         return;
       }
       const response = await fetchOpenRouterQuota(key);
+      if (!isCurrentRender()) return;
       const data = response?.data || {};
       const remaining = data.limit_remaining == null ? NaN : Number(data.limit_remaining);
       const usage = data.usage == null ? NaN : Number(data.usage);
@@ -89,11 +96,12 @@ export function createProviderQuotaUi({ providers, getProviderKey }) {
       note.textContent = 'This is key-level account usage. Free model endpoints can still have separate provider rate limits.';
       providerQuota.append(note, quotaLink(OPENROUTER_QUOTA_URL, 'Open OpenRouter usage ↗'));
     } catch (error) {
-      detail.textContent = error.message || 'Could not load OpenRouter quota.';
+      if (isCurrentRender()) detail.textContent = error.message || 'Could not load OpenRouter quota.';
     }
   }
 
   function setLoading() {
+    renderToken += 1;
     if (providerQuota) providerQuota.textContent = 'Loading provider usage…';
   }
 

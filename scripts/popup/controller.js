@@ -78,11 +78,22 @@ const isApiPage = new URLSearchParams(location.search).get('api') === '1';
 let currentProvider = DEFAULT_AI_PROVIDER;
 let currentSettings = {};
 let apiSettingsState = 'loading';
+let providerChangeToken = 0;
+const providerKeyLoadErrors = new Set();
+
+function setProviderKeyLoadStatus(provider, loaded) {
+  if (loaded) providerKeyLoadErrors.delete(provider);
+  else providerKeyLoadErrors.add(provider);
+  if (provider === currentProvider) updateApiStatus();
+}
+
 const apiKeyManager = createApiKeyManager({
   getCurrentProvider: () => currentProvider,
   getCurrentSettings: () => currentSettings,
   setAiFeedback,
-  updateApiStatus
+  updateApiStatus,
+  onProviderKeysLoaded: provider => setProviderKeyLoadStatus(provider, true),
+  onProviderKeysLoadFailed: provider => setProviderKeyLoadStatus(provider, false)
 });
 const modelCatalog = createModelCatalogUi({
   getCurrentProvider: () => currentProvider,
@@ -92,7 +103,8 @@ const modelCatalog = createModelCatalogUi({
   deprecatedModels: DEPRECATED_MODELS,
   setAiFeedback,
   persistSync,
-  renderApiKeyManager: provider => apiKeyManager.render(provider)
+  renderApiKeyManager: provider => apiKeyManager.render(provider),
+  setProviderKeyLoadStatus
 });
 const isDashboardFrame = new URLSearchParams(location.search).get('dashboard') === '1';
 
@@ -159,6 +171,12 @@ function updateApiStatus() {
     return;
   }
   apiStatus.setAttribute('aria-busy', 'false');
+  if (providerKeyLoadErrors.has(currentProvider)) {
+    apiStatus.textContent = 'Key status unknown';
+    apiStatus.className = 'api-pill checking';
+    apiStatus.title = 'Saved keys for this provider could not be loaded. Check the key list message and try again.';
+    return;
+  }
   const privateKeys = currentSettings.privateApiKeys || {};
   const managedKeys = currentSettings.managedApiKeys || {};
   const hasSavedPreferredKey = (managedKeys[currentProvider] || []).some(key => key.enabled);
@@ -296,10 +314,13 @@ function wireSettings() {
   });
 
   providerSelect?.addEventListener('change', async () => {
+    const changeToken = ++providerChangeToken;
     const nextProvider = providerSelect.value;
     if (!PROVIDERS[nextProvider]) return;
     const previousProvider = currentProvider;
+    modelCatalog.captureCurrentDraft();
     currentProvider = nextProvider;
+    modelCatalog.setProviderFieldsLoading(true);
     modelCatalog.resetVisibleModelLimit();
     if (newApiKeySecret) newApiKeySecret.type = 'password';
     if (toggleNewApiKeyVisibility) {
@@ -307,13 +328,20 @@ function wireSettings() {
       toggleNewApiKeyVisibility.setAttribute('aria-pressed', 'false');
     }
     setAiFeedback('');
-    if (!await persistSync({ aiProvider: currentProvider })) {
-      currentProvider = previousProvider;
-      providerSelect.value = previousProvider;
-      return;
+    try {
+      if (!await persistSync({ aiProvider: nextProvider })) {
+        if (changeToken === providerChangeToken) {
+          currentProvider = previousProvider;
+          providerSelect.value = previousProvider;
+        }
+        return;
+      }
+      if (changeToken !== providerChangeToken) return;
+      currentSettings.aiProvider = nextProvider;
+      await loadProviderFields(nextProvider);
+    } finally {
+      if (changeToken === providerChangeToken) modelCatalog.setProviderFieldsLoading(false);
     }
-    currentSettings.aiProvider = currentProvider;
-    await loadProviderFields(currentProvider);
   });
 
   toggleAIConfig?.addEventListener('click', () => {
@@ -372,6 +400,7 @@ function wireSettings() {
     }
     let saveSucceeded = false;
     saveBtn.disabled = true;
+    if (providerSelect) providerSelect.disabled = true;
     setAiFeedback('Saving provider settings…');
     try {
       await chrome.storage.sync.set({
@@ -401,7 +430,10 @@ function wireSettings() {
       reportStorageFailure('settings');
       setAiFeedback('Could not save. Check extension storage and try again.', 'error');
     } finally {
-      saveBtn.disabled = false;
+      if (!modelCatalog.isProviderFieldsLoading()) {
+        saveBtn.disabled = false;
+        if (providerSelect) providerSelect.disabled = false;
+      }
     }
     if (saveSucceeded && saveBtn) {
       const orig = saveBtn.textContent;
