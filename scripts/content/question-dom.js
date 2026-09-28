@@ -40,19 +40,29 @@
       return choices || [];
     }
 
-    async function pollForImageLabels(expectedCount, nonce = getNonce()) {
+    async function pollForImageLabels(expectedCount, nonce = getNonce(), fallbackChoices = []) {
+      const fallbacks = Array.isArray(fallbackChoices)
+        ? fallbackChoices.map(choice => String(choice ?? '').trim())
+        : [];
       const readLabels = () => {
-        const elements = domAdapter.findAnswerElements();
+        const findElements = domAdapter.findVisibleAnswerElements || domAdapter.findAnswerElements;
+        const elements = findElements();
         if (elements.length < expectedCount) return null;
         const labels = elements.slice(0, expectedCount).map(el => domAdapter.cleanButtonText(el));
-        return labels.some(label => label.length > 0 && !/^image\s*\d+$/i.test(label)) ? labels : null;
+        return labels.length === expectedCount && labels.every(label =>
+          label.trim().length > 0 && !/^image\s*\d+$/i.test(label)
+        ) ? labels : null;
       };
-      const labels = await waitForDomResult(readLabels, { timeout: 2000, nonce });
+      const labels = await waitForDomResult(readLabels, { timeout: 3500, nonce, settleMs: 120 });
       if (labels) return labels;
-      const elements = domAdapter.findAnswerElements();
-      return elements.length > 0
-        ? elements.slice(0, expectedCount).map(el => domAdapter.cleanButtonText(el))
-        : Array.from({ length: expectedCount }, (_, i) => `Image ${i + 1}`);
+      const findElements = domAdapter.findVisibleAnswerElements || domAdapter.findAnswerElements;
+      const elements = findElements();
+      const domLabels = elements.slice(0, expectedCount).map(el => domAdapter.cleanButtonText(el));
+      return Array.from({ length: expectedCount }, (_, index) => {
+        const label = String(domLabels[index] ?? '').trim();
+        if (label && !/^image\s*\d+$/i.test(label)) return label;
+        return fallbacks[index] || '';
+      });
     }
 
     function readSliderConfigFromDOM() {

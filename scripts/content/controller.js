@@ -441,6 +441,7 @@ window.addEventListener('kahootQuestionParsed', async (event) => {
   questionState = isChoiceQuestion ? 'waiting_for_choices' : 'processing';
   questionError = null;
   advanceSubmitNonce();
+  const preparationNonce = submitNonce;
   removeTimerOverlay();
   broadcastToPopup('updateQuestion', {
     question: { title: q.title, type: q.type, choices: q.choices || [] },
@@ -462,7 +463,14 @@ window.addEventListener('kahootQuestionParsed', async (event) => {
     log(`Loading bar found: ${dur}+${del}+${introBuffer}ms buffer = ${dur + del + introBuffer}ms total`);
     return true;
   };
-  readLoadingDuration();
+  for (let attempt = 0; attempt < 10; attempt++) {
+    if (preparationNonce !== submitNonce || lastPreparedHash !== incomingHash) {
+      log('Discarding loading timing from an outdated question.');
+      return;
+    }
+    if (readLoadingDuration()) break;
+    if (attempt < 9) await new Promise(resolve => setTimeout(resolve, 50));
+  }
 
   answerFeedbackUi.cleanupOverlays();
 
@@ -517,7 +525,11 @@ window.addEventListener('kahootQuestionParsed', async (event) => {
   if (settingsPromise) await settingsPromise;
 
   if (!isPin && !isJumble && !isSlider && !isOpenEnded && q.choices.some(c => !c || /^Image \d+$/.test(c))) {
-    const labels = await pollForImageLabels(q.choices.length);
+    const labels = await pollForImageLabels(q.choices.length, submitNonce, q.choices);
+    if (preparationNonce !== submitNonce || lastPreparedHash !== incomingHash) {
+      log('Discarding image labels from an outdated question.');
+      return;
+    }
     if (labels.length === q.choices.length && labels.some(l => l && !/^Image \d+$/i.test(l))) {
       q.choices = labels;
     log(`Image choices resolved: ${labels.length}`);
