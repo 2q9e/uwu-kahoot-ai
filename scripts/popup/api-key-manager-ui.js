@@ -75,12 +75,14 @@ export function createApiKeyManager({
     });
   }
 
-  async function render(provider = getCurrentProvider()) {
+  async function render(provider = getCurrentProvider(), suppliedRecords) {
     if (!apiKeyList || !localConfigKeysEl) return;
     const renderToken = ++renderTokenCounter;
     let records;
     try {
-      records = await getProviderApiKeyEntries(provider);
+      records = Array.isArray(suppliedRecords)
+        ? suppliedRecords
+        : await getProviderApiKeyEntries(provider);
     } catch (error) {
       if (renderToken === renderTokenCounter && provider === getCurrentProvider()) {
         apiKeyList.replaceChildren();

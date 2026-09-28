@@ -85,7 +85,7 @@ export function createProviderFieldsLoader(dependencies) {
         entries = await getProviderApiKeyEntries(provider);
         if (!isCurrentLoad()) return false;
         settings.managedApiKeys = { ...(settings.managedApiKeys || {}), [provider]: entries };
-        await renderApiKeyManager(provider);
+        await renderApiKeyManager(provider, entries);
         if (!isCurrentLoad()) return false;
       } catch (_) {
         if (!isCurrentLoad()) return false;

@@ -81,7 +81,7 @@ export function createPopupSettingsController() {
     deprecatedModels: DEPRECATED_MODELS,
     setAiFeedback,
     persistSync,
-    renderApiKeyManager: provider => apiKeyManager.render(provider),
+    renderApiKeyManager: (provider, records) => apiKeyManager.render(provider, records),
     setProviderKeyLoadStatus
   });
 
