@@ -48,7 +48,10 @@ globalThis.UwUKahootAIStatusUi = {
         setQuestionState('processing', null);
       } else if (/sending|retrying|manual retry/i.test(msg)) {
         setQuestionState('processing', null);
-      } else if (handoff?.stage === 'sent' || handoff?.stage === 'highlighted' || handoff?.stage === 'suggested' || /answer received|answered|pin answer|jumble answer|jumble order shown|slider answer|open-ended answer/i.test(msg)) {
+      } else if (
+        ['sent', 'highlighted', 'suggested', 'manual_review'].includes(handoff?.stage) ||
+        /answer received|answered|pin answer|jumble answer|jumble order shown|slider answer|open-ended answer/i.test(msg)
+      ) {
         setQuestionState('answered', null);
       } else if (getCurrentQuestion()) {
         setQuestionState('ready', null);
