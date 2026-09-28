@@ -8,7 +8,7 @@ import {
 } from '../core/constants.js';
 import { getApiKeys } from '../core/storage.js';
 
-export const PREVIOUS_OPENROUTER_DEFAULT = 'google/gemini-3.8-flash';
+const PREVIOUS_OPENROUTER_DEFAULT = 'google/gemini-3.8-flash';
 export const PROVIDER_FALLBACK_ORDER = ['openrouter', 'gemini', 'openai'];
 export const PROVIDER_SETTINGS = {
   openai: { modelKey: 'openaiModel', visionKey: 'openaiVisionModel', backupKey: 'openaiBackupModels', fastModelKey: 'openaiFastModel', model: DEFAULT_MODEL, visionModel: DEFAULT_VISION_MODEL },
@@ -23,6 +23,17 @@ export function providerLabel(provider) {
   return ({ openai: 'OpenAI', gemini: 'Google AI Studio', openrouter: 'OpenRouter' })[provider] || 'AI provider';
 }
 
+export function getOpenRouterDefaultMigration(settings = {}) {
+  const migratedModels = {};
+  if (settings.openrouterModel === PREVIOUS_OPENROUTER_DEFAULT) {
+    migratedModels.openrouterModel = DEFAULT_OPENROUTER_MODEL;
+  }
+  if (settings.openrouterVisionModel === PREVIOUS_OPENROUTER_DEFAULT) {
+    migratedModels.openrouterVisionModel = DEFAULT_OPENROUTER_VISION_MODEL;
+  }
+  return migratedModels;
+}
+
 export async function getAISettings() {
   const sync = await chrome.storage.sync.get([
     'aiProvider', 'aiFallbackEnabled', 'openaiModel', 'openaiVisionModel',
@@ -30,9 +41,7 @@ export async function getAISettings() {
     'openrouterModel', 'openrouterVisionModel', 'openrouterBackupModels', 'openrouterFastModel', 'modelReasoningEffort',
     'fastBinaryAnswersEnabled'
   ]);
-  const migratedModels = {};
-  if (sync.openrouterModel === PREVIOUS_OPENROUTER_DEFAULT) migratedModels.openrouterModel = DEFAULT_OPENROUTER_MODEL;
-  if (sync.openrouterVisionModel === PREVIOUS_OPENROUTER_DEFAULT) migratedModels.openrouterVisionModel = DEFAULT_OPENROUTER_VISION_MODEL;
+  const migratedModels = getOpenRouterDefaultMigration(sync);
   if (Object.keys(migratedModels).length) await chrome.storage.sync.set(migratedModels);
   const settings = { ...sync, ...migratedModels };
   const requestedProvider = PROVIDER_SETTINGS[settings.aiProvider] ? settings.aiProvider : 'openai';

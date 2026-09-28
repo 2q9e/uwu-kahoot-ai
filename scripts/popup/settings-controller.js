@@ -8,7 +8,7 @@ import { createApiKeyManager } from './api-key-manager-ui.js';
 import { createModelCatalogUi } from './model-catalog-ui.js';
 import { getApiStatusPresentation } from './api-status-presentation.js';
 import { DEFAULT_AI_PROVIDER, DEPRECATED_MODELS } from '../core/constants.js';
-import { PREVIOUS_OPENROUTER_DEFAULT, PROVIDER_SETTINGS } from '../ai/provider-config.js';
+import { getOpenRouterDefaultMigration, PROVIDER_SETTINGS } from '../ai/provider-config.js';
 
 export function createPopupSettingsController() {
   const apiStatus = document.getElementById('apiStatus');
@@ -120,9 +120,7 @@ export function createPopupSettingsController() {
       'openrouterModel', 'openrouterVisionModel', 'openrouterBackupModels', 'openrouterFastModel',
       'fastBinaryAnswersEnabled'
     ]);
-    const migratedModels = {};
-    if (settings.openrouterModel === PREVIOUS_OPENROUTER_DEFAULT) migratedModels.openrouterModel = PROVIDERS.openrouter.defaultModel;
-    if (settings.openrouterVisionModel === PREVIOUS_OPENROUTER_DEFAULT) migratedModels.openrouterVisionModel = PROVIDERS.openrouter.defaultVision;
+    const migratedModels = getOpenRouterDefaultMigration(settings);
     if (Object.keys(migratedModels).length) {
       await chrome.storage.sync.set(migratedModels);
       Object.assign(settings, migratedModels);
