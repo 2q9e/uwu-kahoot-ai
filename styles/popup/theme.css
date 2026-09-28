@@ -1,0 +1,329 @@
+:root {
+  --ui-accent: #ff78ce;
+  --ui-accent-bright: #ffb0e5;
+  --ui-accent-deep: #d94fb4;
+  --ui-violet: #b88aff;
+  --ui-ink: #110a16;
+  --ui-panel: rgba(31, 18, 37, .88);
+  --ui-panel-raised: rgba(44, 24, 53, .92);
+  --ui-line: rgba(255, 170, 225, .15);
+  --ui-quiet: #b5a5bc;
+  --ui-ease: cubic-bezier(.2, .8, .2, 1);
+}
+
+html {
+  color: #f8eff8;
+  background:
+    radial-gradient(520px 320px at 6% -4%, rgba(229, 72, 177, .18), transparent 68%),
+    radial-gradient(520px 340px at 100% 38%, rgba(133, 76, 185, .13), transparent 68%),
+    #100a15;
+}
+html.dashboard-html {
+  background:
+    radial-gradient(680px 460px at 8% 0%, rgba(216, 66, 166, .14), transparent 70%),
+    #100a15;
+}
+html.api-page-html {
+  background:
+    radial-gradient(900px 520px at 6% -8%, rgba(219, 66, 169, .18), transparent 64%),
+    radial-gradient(760px 500px at 96% 20%, rgba(141, 76, 185, .14), transparent 66%),
+    #100a15;
+}
+
+body.popup-container,
+body.dashboard-embedded,
+body.api-page,
+body.api-page.popup-container {
+  color: #e8dce9;
+  background: transparent;
+}
+
+.popup-scroll {
+  scrollbar-color: rgba(255, 120, 206, .4) transparent;
+  scrollbar-width: thin;
+}
+.popup-scroll::-webkit-scrollbar-thumb { background: rgba(255, 120, 206, .34); }
+.popup-scroll:focus-visible { outline: none; }
+
+.header {
+  border-color: rgba(255, 170, 225, .13);
+}
+.brand-mark {
+  border-color: rgba(255, 190, 232, .45);
+  background: linear-gradient(145deg, #ffb0e5, #de55b8 62%, #8e48ce);
+  box-shadow: 0 9px 25px rgba(209, 63, 161, .28), inset 0 1px rgba(255,255,255,.48);
+}
+.title {
+  background-image: linear-gradient(120deg, #fff0fb, #ff9fda 48%, #d9b7ff);
+}
+.version { color: #a78dac; }
+.section-kicker { color: #b493b9; }
+
+.api-pill {
+  border-color: rgba(255, 190, 232, .16);
+  background: rgba(20, 11, 25, .76);
+  box-shadow: inset 0 1px rgba(255,255,255,.035);
+}
+.api-pill.ok,
+.api-pill.local,
+.api-pill.fallback {
+  border-color: rgba(255, 120, 206, .3);
+  background: rgba(216, 69, 169, .13);
+  color: #ffb6e3;
+}
+.api-pill.checking { color: #c5b4c8; }
+.api-pill.missing { border-color: rgba(255, 195, 109, .24); }
+
+.kahoot-attachment,
+.live-card,
+.section,
+.stats-teaser,
+.api-panel {
+  border-color: var(--ui-line);
+  background: linear-gradient(145deg, rgba(48, 26, 55, .82), rgba(20, 13, 25, .84));
+  box-shadow: 0 12px 28px rgba(4, 2, 8, .2), inset 0 1px rgba(255,255,255,.045);
+}
+.kahoot-attachment {
+  background: linear-gradient(120deg, rgba(205, 57, 157, .15), rgba(52, 29, 66, .65));
+}
+.live-card {
+  background: linear-gradient(145deg, rgba(100, 36, 91, .38), rgba(27, 16, 35, .94) 70%);
+  box-shadow: 0 16px 34px rgba(5, 2, 10, .24), inset 0 1px rgba(255,255,255,.065);
+}
+.live-status.state-processing { color: #ffd1f0; }
+.live-status.state-waiting_for_choices { color: #ffd38d; }
+.live-status.state-answered { color: #ff9bd8; }
+.live-status.state-error { color: #ff9da9; }
+.live-status.state-idle { color: #d4c4d8; }
+.live-empty,
+.live-question { background: rgba(12, 7, 17, .42); }
+.live-label {
+  border: 1px solid rgba(255, 155, 218, .13);
+  background: rgba(222, 76, 177, .2);
+  color: #ff9fda;
+}
+.live-label-a { background: rgba(185, 137, 255, .15); color: #d5bbff; }
+.live-a.active { color: #ff9fda; }
+
+.toggle-track { background: #38253e; }
+.toggle-track::after { background: #a28aa8; }
+.toggle input:checked + .toggle-track { background: rgba(239, 83, 181, .5); }
+.toggle input:checked + .toggle-track::after {
+  background: #fff0fa;
+  box-shadow: 0 0 10px rgba(255, 120, 206, .72);
+}
+.slider { background: linear-gradient(90deg, #b339a0, #ff8cd2); }
+.slider::-webkit-slider-thumb,
+.slider::-moz-range-thumb {
+  background: #ff98d8;
+  box-shadow: 0 0 12px rgba(255, 120, 206, .55);
+}
+
+.field-input,
+.field-select {
+  border-color: rgba(230, 170, 228, .2);
+  background-color: #1a1121;
+  color: #f4eaf5;
+  box-shadow: inset 0 1px rgba(255,255,255,.025);
+}
+.field-input:focus,
+.field-select:focus {
+  border-color: var(--ui-accent);
+  box-shadow: 0 0 0 3px rgba(255, 120, 206, .14), 0 7px 18px rgba(5, 1, 9, .18);
+}
+.field-label { color: #d0b8d3; }
+.setting-note,
+.pin-note,
+.openai-note,
+.kahoot-attach-status { color: #a995ae; }
+.settings-feedback.success { color: #ff9fda; }
+
+.btn-save,
+.btn-tab-action,
+.btn-retry,
+.catalog-action,
+.btn-catalog,
+.dashboard-launch,
+.text-link {
+  border-color: rgba(255, 142, 214, .27);
+  background: linear-gradient(135deg, rgba(217, 70, 169, .22), rgba(126, 64, 166, .16));
+  color: #ffe2f4;
+  box-shadow: inset 0 1px rgba(255,255,255,.075), 0 5px 15px rgba(7, 2, 12, .13);
+}
+.btn-save { background: linear-gradient(135deg, #ec68bf, #b54bd3); color: #fff7fc; }
+.catalog-action.secondary { border-color: rgba(219, 180, 229, .18); background: rgba(255,255,255,.045); color: #e2d5e7; }
+.catalog-action.danger { border-color: rgba(255, 125, 148, .23); background: rgba(147, 41, 65, .19); color: #ffbdc7; }
+.btn-save:hover:not(:disabled),
+.btn-tab-action:hover:not(:disabled),
+.btn-retry:hover:not(:disabled),
+.catalog-action:hover:not(:disabled),
+.btn-catalog:hover:not(:disabled),
+.dashboard-launch:hover:not(:disabled),
+.text-link:hover {
+  border-color: rgba(255, 171, 226, .56);
+  background-color: rgba(218, 66, 166, .25);
+  box-shadow: 0 10px 24px rgba(196, 50, 145, .15), inset 0 1px rgba(255,255,255,.1);
+  color: #fff7fd;
+}
+.btn-save:focus-visible,
+.btn-tab-action:focus-visible,
+.btn-retry:focus-visible,
+.catalog-action:focus-visible,
+.btn-catalog:focus-visible,
+.dashboard-launch:focus-visible,
+.text-link:focus-visible,
+.btn-key-visibility:focus-visible,
+.view-button:focus-visible {
+  outline: 2px solid #ffa9df;
+  outline-offset: 3px;
+}
+
+.collapse-arrow {
+  border: 1px solid rgba(255, 143, 213, .16);
+  background: rgba(214, 66, 168, .11);
+  color: #f2b8df;
+}
+.api-key-card,
+.model-card {
+  border-color: rgba(232, 172, 233, .12);
+  background: linear-gradient(150deg, rgba(44, 28, 52, .75), rgba(22, 15, 28, .86));
+  box-shadow: inset 0 1px rgba(255,255,255,.035);
+}
+.api-key-card:hover,
+.model-card:hover { border-color: rgba(255, 143, 213, .34); }
+.api-key-empty,
+.catalog-empty {
+  border-color: rgba(255, 154, 216, .2);
+  background: rgba(229, 72, 177, .045);
+  color: #c8b1ce;
+}
+.key-replace-row .key-replacement-label { display: grid; min-width: 0; gap: 5px; }
+.key-replace-row .key-replacement-label .field-input { width: 100%; }
+.api-key-state.enabled,
+.model-card-selection > span {
+  border-color: rgba(255, 133, 209, .22);
+  background: rgba(207, 65, 162, .13);
+  color: #ffc0e6;
+}
+.managed-key-mask,
+.model-card-heading code { color: #dab7e7; }
+.api-key-summary,
+.catalog-count,
+.recent-count { color: #ffc2e7; }
+.api-key-test-status.success { color: #ffb1e4; }
+.api-key-test-status.pending { color: #c9b0d1; }
+.api-key-priority { color: #ddbddd; }
+.provider-quota strong { color: #f2d8ed; }
+.local-config-name { color: #d6c1db; }
+.model-selection-summary {
+  border-color: rgba(255, 153, 216, .18);
+  background: linear-gradient(135deg, rgba(207, 64, 162, .12), rgba(121, 65, 165, .08));
+}
+.model-selection-summary-heading > strong { color: #f7e7f5; }
+.model-selection-state {
+  border-color: rgba(255, 147, 212, .24);
+  background: rgba(207, 64, 162, .13);
+  color: #ffbae4;
+}
+.model-selection-summary-grid p > span { color: #b699bd; }
+.model-selection-summary-grid p > strong { color: #eedfee; }
+.model-quick-picks {
+  border-color: rgba(255, 169, 224, .12);
+  background: rgba(16, 9, 21, .45);
+}
+.model-quick-picks > div:first-child > strong { color: #f0ddef; }
+
+body.api-page .api-page-intro h2 { color: #fff0fa; }
+body.api-page .api-page-nav {
+  border-color: rgba(255, 157, 218, .17);
+  background: rgba(39, 22, 46, .7);
+  box-shadow: 0 12px 30px rgba(5, 2, 9, .15), inset 0 1px rgba(255,255,255,.04);
+}
+body.api-page .api-page-nav a { color: #dbc7df; }
+body.api-page .api-page-nav a:hover,
+body.api-page .api-page-nav .api-page-exit {
+  border-color: rgba(255, 143, 213, .22);
+  background: rgba(214, 66, 168, .14);
+  color: #ffe5f6;
+}
+body.api-page .api-panel {
+  border-color: rgba(255, 157, 218, .14);
+  background: linear-gradient(150deg, rgba(47, 26, 56, .84), rgba(22, 14, 29, .92));
+  box-shadow: 0 20px 44px rgba(3, 1, 7, .22), inset 0 1px rgba(255,255,255,.045);
+}
+body.api-page .api-panel::before {
+  background: linear-gradient(180deg, #ff9edb, rgba(169, 95, 215, .12));
+}
+body.api-page .api-panel-heading .section-kicker { color: #cf9dc9; }
+body.api-page .api-panel-heading h3 { color: #fff0fa; }
+body.api-page .api-panel-index {
+  border-color: rgba(255, 152, 216, .2);
+  background: rgba(211, 61, 161, .12);
+  color: #ffb4e2;
+}
+body.api-page .api-page-intro,
+body.api-page .api-page-nav,
+body.api-page .api-panel { scroll-margin-top: 22px; }
+
+.dashboard-launch-row { gap: 8px; }
+.dashboard-launch { min-height: 39px; border-radius: 11px; }
+.stats-teaser {
+  border-color: rgba(255, 157, 218, .17);
+  background: linear-gradient(105deg, rgba(213, 62, 164, .17), rgba(119, 69, 167, .12));
+}
+.stats-teaser strong { color: #fff0fa; }
+.footer { color: #a38eaa; }
+.footer-brand { color: #c6afcc; }
+.footer kbd { border-color: rgba(255, 157, 218, .2); background: rgba(214, 66, 168, .08); color: #f4d8ed; }
+
+@media (hover: hover) and (pointer: fine) {
+  .live-card,
+  .section,
+  .kahoot-attachment,
+  .stats-teaser,
+  body.api-page .api-panel {
+    transition: transform .22s var(--ui-ease), border-color .22s var(--ui-ease), box-shadow .22s var(--ui-ease);
+    transform-style: preserve-3d;
+  }
+  .live-card:hover,
+  .section:hover,
+  .kahoot-attachment:hover,
+  .stats-teaser:hover,
+  body.api-page .api-panel:hover {
+    transform: perspective(1100px) translateY(-2px) rotateX(.45deg);
+    border-color: rgba(255, 157, 218, .28);
+    box-shadow: 0 16px 34px rgba(4, 1, 9, .26), inset 0 1px rgba(255,255,255,.07);
+  }
+}
+
+@supports (animation-timeline: view(block)) {
+  body:not(.dashboard-embedded):not(.api-page) .popup-scroll > main > .kahoot-attachment,
+  body:not(.dashboard-embedded):not(.api-page) .popup-scroll > main > .live-card,
+  body:not(.dashboard-embedded):not(.api-page) .popup-scroll > main > .stats-teaser,
+  body:not(.dashboard-embedded):not(.api-page) .popup-scroll > main > .section {
+    animation: popup-card-depth linear both;
+    animation-timeline: view(block);
+    animation-range: entry 0% entry 42%;
+  }
+  body.api-page .api-panel {
+    animation: api-panel-depth linear both;
+    animation-timeline: view(block);
+    animation-range: entry 0% entry 48%;
+  }
+  @keyframes popup-card-depth {
+    from { opacity: .56; translate: 0 22px -28px; rotate: x 3deg; }
+    to { opacity: 1; translate: 0 0 0; rotate: x 0deg; }
+  }
+  @keyframes api-panel-depth {
+    from { opacity: .45; translate: 0 42px -75px; rotate: x 4deg; }
+    to { opacity: 1; translate: 0 0 0; rotate: x 0deg; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-card,
+  .section,
+  .kahoot-attachment,
+  .stats-teaser,
+  body.api-page .api-panel { transform: none !important; }
+}

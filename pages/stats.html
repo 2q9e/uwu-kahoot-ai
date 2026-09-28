@@ -6,6 +6,7 @@
   <meta name="color-scheme" content="dark">
   <title>UwU Kahoot AI · Stats</title>
   <link rel="stylesheet" href="../styles/stats.css">
+  <link rel="stylesheet" href="../styles/stats-motion.css">
 </head>
 <body>
   <div class="stats-shell">
@@ -14,13 +15,16 @@
         <img class="brand-glyph" src="../icons/icon48.png" alt="" aria-hidden="true">
         <span><strong>UwU Kahoot AI</strong><small>STATS</small></span>
       </a>
-      <a class="back-link" href="dashboard.html">← Dashboard</a>
+      <nav class="stats-nav" aria-label="Workspace links">
+        <a class="back-link" href="dashboard.html">Workspace <span aria-hidden="true">↗</span></a>
+        <a class="back-link secondary-link" href="popup.html?api=1" target="_blank" rel="noopener">API setup <span aria-hidden="true">↗</span></a>
+      </nav>
     </header>
 
     <main>
       <section class="intro">
         <span class="eyebrow"><i></i> YOUR ACTIVITY</span>
-        <h1>Progress, at a glance.</h1>
+        <h1>Your quiz history,<br>in a clearer view.</h1>
         <p>Local totals for AI answers generated in this browser. Kahoot may still reject a click or mark an answer incorrect.</p>
       </section>
 
@@ -31,7 +35,7 @@
           <small>Answer requests with a response</small>
         </article>
         <article class="metric-card">
-          <span class="metric-label">Average AI response</span>
+          <span class="metric-label">Average response</span>
           <strong id="averageResponse">Loading…</strong>
           <small>Question sent to answer received</small>
         </article>

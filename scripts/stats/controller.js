@@ -8,6 +8,9 @@ const emptyState = document.getElementById('emptyState');
 const metricGrid = document.querySelector('.metric-grid');
 const recentCard = document.querySelector('.recent-card');
 const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
+const scrollLinkedAnimations = typeof CSS !== 'undefined' &&
+  CSS.supports?.('animation-timeline: scroll(root block)');
+let scrollProgressFrame = 0;
 
 const TYPE_LABELS = {
   quiz: 'Multiple choice', true_false: 'True / false', multiple_select_quiz: 'Multi-select',
@@ -119,6 +122,40 @@ async function loadStats() {
     renderStats(stored[STORAGE_KEY]);
   } catch (_) {
     renderUnavailable();
+  }
+}
+
+function updateScrollProgress() {
+  scrollProgressFrame = 0;
+  if (scrollLinkedAnimations) return;
+  const range = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = range > 0 ? Math.max(0, Math.min(1, window.scrollY / range)) : 0;
+  document.documentElement.style.setProperty('--stats-scroll', progress.toFixed(4));
+}
+
+function scheduleScrollProgress() {
+  if (!scrollProgressFrame) scrollProgressFrame = requestAnimationFrame(updateScrollProgress);
+}
+
+window.addEventListener('scroll', scheduleScrollProgress, { passive: true });
+window.addEventListener('resize', scheduleScrollProgress, { passive: true });
+scheduleScrollProgress();
+
+if (!motionPreference.matches) {
+  for (const card of document.querySelectorAll('.metric-card, .recent-card')) {
+    card.addEventListener('pointermove', event => {
+      if (event.pointerType !== 'mouse' || motionPreference.matches) return;
+      const bounds = card.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return;
+      const x = Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width));
+      const y = Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height));
+      card.style.setProperty('--card-tilt-x', `${((x - .5) * 4.2).toFixed(2)}deg`);
+      card.style.setProperty('--card-tilt-y', `${((.5 - y) * 3.5).toFixed(2)}deg`);
+    }, { passive: true });
+    card.addEventListener('pointerleave', () => {
+      card.style.removeProperty('--card-tilt-x');
+      card.style.removeProperty('--card-tilt-y');
+    }, { passive: true });
   }
 }
 

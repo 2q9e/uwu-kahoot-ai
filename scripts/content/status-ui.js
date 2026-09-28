@@ -18,8 +18,8 @@ globalThis.UwUKahootAIStatusUi = {
         max-width:320px; word-wrap:break-word;
         pointer-events:none; transition:opacity .3s;
         backdrop-filter:blur(8px);
-        border:1px solid rgba(192,38,211,.3);
-        box-shadow:0 4px 12px rgba(0,0,0,.4);
+        border:1px solid rgba(255,120,206,.38);
+        box-shadow:0 12px 34px rgba(15,4,18,.46), 0 0 22px rgba(217,79,180,.12), inset 0 1px rgba(255,255,255,.08);
       `;
       statusEl.innerHTML = '<div id="uwukahootai-status-main" style="display:flex;align-items:center;gap:6px">UwU Kahoot AI: Ready</div><div id="uwukahootai-status-detail" style="font-weight:400;font-size:11px;opacity:.7;margin-top:3px;display:none"></div>';
       document.body?.appendChild(statusEl);
@@ -29,7 +29,7 @@ globalThis.UwUKahootAIStatusUi = {
       if (!statusEl) return;
       if (on && !thinkingDot) {
         thinkingDot = document.createElement('span');
-        thinkingDot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:#c026d3;display:inline-block;animation:uwukahootai-pulse 1s ease-in-out infinite;flex-shrink:0';
+        thinkingDot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:#ff78ce;display:inline-block;animation:uwukahootai-pulse 1s ease-in-out infinite;flex-shrink:0';
         statusEl.querySelector('#uwukahootai-status-main')?.appendChild(thinkingDot);
       } else if (!on && thinkingDot) {
         thinkingDot.remove();
@@ -85,10 +85,10 @@ globalThis.UwUKahootAIStatusUi = {
       const toast = document.createElement('div');
       toast.style.cssText = `
         position:fixed; top:${20 + activeToasts.length * 55}px; right:20px;
-        background:#e74c3c; color:#fff;
+        background:#a83159; color:#fff;
         padding:12px 16px; border-radius:8px; z-index:9999;
         font:600 13px/1.3 system-ui,sans-serif;
-        max-width:300px; box-shadow:0 4px 12px rgba(0,0,0,.3);
+        max-width:300px; border:1px solid rgba(255,176,199,.42); box-shadow:0 14px 34px rgba(15,4,18,.42), 0 0 22px rgba(222,73,127,.16);
         animation: uwukahootai-fadein .25s ease-out;
       `;
       toast.textContent = message;

@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="../styles/popup/motion.css">
   <link rel="stylesheet" href="../styles/popup/dashboard-layout.css">
   <link rel="stylesheet" href="../styles/popup/api-dashboard.css">
+  <link rel="stylesheet" href="../styles/popup/theme.css">
 </head>
 <body class="popup-container">
   <div class="popup-scroll">
@@ -152,10 +153,10 @@
             <details class="add-api-key">
               <summary>Add an API key</summary>
               <label class="field-label" for="newApiKeyLabel">Label</label>
-              <input id="newApiKeyLabel" class="field-input" type="text" maxlength="60" autocomplete="off" placeholder="e.g. Main account or backup">
+              <input id="newApiKeyLabel" class="field-input" type="text" maxlength="60" autocomplete="off">
               <label class="field-label" for="newApiKeySecret">Provider API key</label>
               <div class="key-input-row">
-                <input type="password" id="newApiKeySecret" class="field-input" aria-label="New provider API key" aria-describedby="keyStorageNote" autocomplete="new-password" spellcheck="false" placeholder="Paste your provider API key">
+                <input type="password" id="newApiKeySecret" class="field-input" aria-label="New provider API key" aria-describedby="keyStorageNote" autocomplete="new-password" spellcheck="false">
                 <button id="toggleNewApiKeyVisibility" class="btn-key-visibility" type="button" aria-controls="newApiKeySecret" aria-pressed="false" aria-label="Show new API key">Show</button>
               </div>
               <button id="addApiKey" class="btn-save add-key-button" type="button">Add key</button>
@@ -242,7 +243,7 @@
             <button id="refreshModels" class="btn-catalog" type="button">Refresh</button>
           </div>
           <div class="catalog-filters">
-            <input id="modelSearch" class="field-input catalog-search" type="search" aria-label="Search models by name or ID" placeholder="Search model name, ID, or description">
+            <input id="modelSearch" class="field-input catalog-search" type="search" aria-label="Search models by name or ID">
             <select id="modelCapabilityFilter" class="field-select catalog-capability-filter" aria-label="Filter models by capability">
               <option value="all">All models</option>
               <option value="text">Text answers</option>

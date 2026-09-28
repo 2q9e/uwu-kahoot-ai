@@ -12,7 +12,6 @@ export function createApiKeyManager({ getCurrentProvider, getCurrentSettings, se
   const apiKeySummary = document.getElementById('apiKeySummary');
   const localConfigKeysEl = document.getElementById('localConfigKeys');
   const testEnabledKeysButton = document.getElementById('testEnabledApiKeys');
-  const newApiKeySecret = document.getElementById('newApiKeySecret');
   let renderTokenCounter = 0;
 
 function managerButton(text, className = 'catalog-action secondary') {
@@ -59,13 +58,6 @@ async function render(provider = getCurrentProvider()) {
   const records = await getProviderApiKeyEntries(provider);
   if (renderToken !== renderTokenCounter || provider !== getCurrentProvider()) return;
   const settings = getCurrentSettings();
-  if (newApiKeySecret) {
-    newApiKeySecret.placeholder = provider === 'gemini'
-      ? 'Paste Google AI Studio API key'
-      : provider === 'openrouter'
-        ? 'Paste OpenRouter API key'
-        : 'Paste OpenAI API key';
-  }
   const localKeys = settings.privateApiKeys?.[provider] || [];
   const enabledRecords = records.filter(record => record.enabled);
   const primaryLabel = enabledRecords[0]?.label || 'none';
@@ -142,15 +134,18 @@ async function render(provider = getCurrentProvider()) {
 
     const replaceRow = document.createElement('div');
     replaceRow.className = 'key-replace-row hidden';
+    const replacementLabel = document.createElement('label');
+    replacementLabel.className = 'field-label key-replacement-label';
+    replacementLabel.textContent = 'Replacement API key';
     const replacement = document.createElement('input');
     replacement.className = 'field-input';
     replacement.type = 'password';
     replacement.autocomplete = 'new-password';
     replacement.spellcheck = false;
-    replacement.placeholder = 'Paste replacement API key';
     replacement.setAttribute('aria-label', `Replacement key for ${record.label}`);
+    replacementLabel.append(replacement);
     const replaceSave = managerButton('Update key', 'catalog-action');
-    replaceRow.append(replacement, replaceSave);
+    replaceRow.append(replacementLabel, replaceSave);
 
     label.addEventListener('change', async () => {
       try {

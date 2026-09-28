@@ -54,7 +54,7 @@ export function createProviderQuotaUi({ providers, getProviderKey }) {
     providerQuota.replaceChildren();
     if (provider !== 'openrouter') {
       const title = document.createElement('strong');
-      title.textContent = `${providers[provider]?.keyPlaceholder || 'Provider'} usage`;
+      title.textContent = `${providers[provider]?.keyLabel || 'Provider'} usage`;
       const note = document.createElement('p');
       note.className = 'quota-note';
       note.textContent = 'This provider does not expose account quota in the extension model catalog.';

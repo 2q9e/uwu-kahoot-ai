@@ -51,19 +51,19 @@ const PROVIDERS = {
     key: 'openaiApiKey', modelKey: 'openaiModel', visionKey: 'openaiVisionModel',
     backupKey: 'openaiBackupModels', fastModelKey: 'openaiFastModel',
     defaultModel: DEFAULT_MODEL, defaultVision: DEFAULT_VISION_MODEL,
-    keyPlaceholder: 'OpenAI API key'
+    keyLabel: 'OpenAI API key'
   },
   gemini: {
     key: 'geminiApiKey', modelKey: 'geminiModel', visionKey: 'geminiVisionModel',
     backupKey: 'geminiBackupModels', fastModelKey: 'geminiFastModel',
     defaultModel: DEFAULT_GEMINI_MODEL, defaultVision: DEFAULT_GEMINI_VISION_MODEL,
-    keyPlaceholder: 'Google AI Studio API key'
+    keyLabel: 'Google AI Studio API key'
   },
   openrouter: {
     key: 'openrouterApiKey', modelKey: 'openrouterModel', visionKey: 'openrouterVisionModel',
     backupKey: 'openrouterBackupModels', fastModelKey: 'openrouterFastModel',
     defaultModel: DEFAULT_OPENROUTER_MODEL, defaultVision: DEFAULT_OPENROUTER_VISION_MODEL,
-    keyPlaceholder: 'OpenRouter API key'
+    keyLabel: 'OpenRouter API key'
   }
 };
 
