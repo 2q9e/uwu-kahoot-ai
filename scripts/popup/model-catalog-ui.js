@@ -47,6 +47,18 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
     .map(id => document.getElementById(id))
     .filter(Boolean);
   let providerFieldsLoading = false;
+  let modelSettingsDirty = false;
+
+  function updateModelSaveControls() {
+    if (saveSettingsButton) saveSettingsButton.disabled = providerFieldsLoading || !modelSettingsDirty;
+    const saveLink = document.getElementById('apiSaveNavLink');
+    if (saveLink) {
+      saveLink.classList.toggle('unsaved', modelSettingsDirty);
+      saveLink.setAttribute('aria-label', modelSettingsDirty
+        ? 'Go to save section; model settings have unsaved changes'
+        : 'Go to save section; model settings are saved');
+    }
+  }
 
   function setProviderFieldsLoading(loading) {
     providerFieldsLoading = Boolean(loading);
@@ -56,7 +68,7 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
       else panel.removeAttribute('aria-busy');
     }
     if (providerSelect) providerSelect.disabled = providerFieldsLoading;
-    if (saveSettingsButton) saveSettingsButton.disabled = providerFieldsLoading;
+    updateModelSaveControls();
   }
 
   function clearProviderKeyList(message) {
@@ -154,11 +166,13 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
       ? { reasoningEffort: effort, fastBinaryAnswersEnabled: fastLane }
       : null;
     const dirty = providerFieldsDirty || sharedModelDraft !== null;
+    modelSettingsDirty = dirty;
     if (modelSelectionState) {
       modelSelectionState.textContent = dirty ? 'Unsaved changes' : 'Saved setup';
       modelSelectionState.classList.toggle('unsaved', dirty);
       modelSelectionState.classList.toggle('saved', !dirty);
     }
+    updateModelSaveControls();
   }
   const modelRenderer = createModelCatalogRenderer({
     catalogPrefix: CATALOG_STORAGE_PREFIX,
@@ -348,6 +362,7 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
     currentBackupSelection: backupModelUi.currentBackupSelection,
     getFormValues,
     getModels: providerCatalog.getModels,
+    isModelSettingsDirty: () => modelSettingsDirty,
     isFreeOpenRouterModel,
     loadProviderFields,
     loadGeminiSpeedMeasurements,

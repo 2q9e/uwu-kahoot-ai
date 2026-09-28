@@ -161,6 +161,20 @@ body.api-page .api-page-nav .api-page-exit {
   color: #e1d5e5;
 }
 
+body.api-page .api-page-nav a.unsaved {
+  border-color: rgba(240,171,252,.42);
+  background: rgba(192,38,211,.2);
+  color: #fae8ff;
+}
+
+.api-save-behavior { display: grid; gap: 7px; margin: 9px 0; }
+.api-save-behavior > div { display: grid; gap: 3px; padding: 8px 9px; border: 1px solid rgba(255,255,255,.075); border-radius: 8px; background: rgba(0,0,0,.12); }
+.api-save-behavior strong { color: #f0abfc; font-size: 10px; }
+.api-save-behavior p { margin: 0; color: #b9aeba; font-size: 10px; line-height: 1.45; }
+.api-inline-save-status { min-height: 0; margin: 0; color: #f0abfc; font-size: 10px; line-height: 1.4; }
+.api-inline-save-status:empty { display: none; }
+.api-inline-save-status.error { color: #fca5a5; }
+
 body.api-page main { display: block; }
 body.api-page main > :not(#apiSettingsCard):not(.api-page-nav) { display: none !important; }
 body.api-page #apiSettingsCard {

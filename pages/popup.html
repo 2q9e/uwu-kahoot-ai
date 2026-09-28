@@ -50,7 +50,7 @@
       <a href="#backupModelsPanel">Backups</a>
       <a href="#fastBinaryPanel">Fast lane</a>
       <a href="#modelCatalogPanel">Catalog</a>
-      <a href="#saveSettingsPanel">Save</a>
+      <a id="apiSaveNavLink" href="#saveSettingsPanel">Save</a>
       <a class="api-page-exit" href="dashboard.html">Workspace ↗</a>
       <a class="api-page-exit" href="stats.html">Stats ↗</a>
     </nav>
@@ -153,7 +153,17 @@
             <option value="gemini">Google AI Studio (Gemini)</option>
             <option value="openrouter">OpenRouter</option>
           </select>
-          <p class="setting-note">Provider choice, fallback, and API key changes apply immediately. Model, backup, reasoning, and fast-lane settings save separately.</p>
+          <div class="api-save-behavior" role="group" aria-label="When API settings are saved">
+            <div>
+              <strong>Saved right away</strong>
+              <p>Provider choice, fallback preference, and API key actions.</p>
+            </div>
+            <div>
+              <strong>Save model settings</strong>
+              <p>Text and image models, reasoning, backups, and the True/False fast lane.</p>
+            </div>
+          </div>
+          <p id="providerSaveStatus" class="api-inline-save-status" role="status" aria-live="polite"></p>
           <div class="toggle-row"><label for="aiFallback">Fallback to other saved providers</label><label class="toggle"><input type="checkbox" id="aiFallback" checked><span class="toggle-track"></span></label></div>
           <div class="openai-note">When fallback is enabled, retryable provider errors can include connection failures, timeouts, access or billing errors, rate limits, unavailable models, and service errors. A retry may send question text or images to another provider with a saved key. Each provider's privacy terms, usage limits, and billing apply.</div>
         </section>

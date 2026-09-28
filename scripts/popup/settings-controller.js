@@ -12,6 +12,7 @@ import { getOpenRouterDefaultMigration, PROVIDER_SETTINGS } from '../ai/provider
 
 export function createPopupSettingsController() {
   const apiStatus = document.getElementById('apiStatus');
+  const providerSaveStatus = document.getElementById('providerSaveStatus');
   const retrySettingsLoadBtn = document.getElementById('retrySettingsLoad');
   const highlightCb = document.getElementById('highlight');
   const autoclickCb = document.getElementById('autoclick');
@@ -104,6 +105,12 @@ export function createPopupSettingsController() {
 
   function updateNewApiKeyProviderLabel() {
     if (newApiKeyProviderLabel) newApiKeyProviderLabel.textContent = PROVIDER_KEY_LABELS[currentProvider] || 'Provider API key';
+  }
+
+  function setProviderSaveStatus(message, state = '') {
+    if (!providerSaveStatus) return;
+    providerSaveStatus.textContent = message;
+    providerSaveStatus.className = `api-inline-save-status ${state}`;
   }
 
 
@@ -207,10 +214,12 @@ export function createPopupSettingsController() {
       const nextValue = fallbackCb.checked;
       if (!await persistSync({ aiFallbackEnabled: nextValue })) {
         fallbackCb.checked = currentSettings.aiFallbackEnabled !== false;
+        setProviderSaveStatus('Fallback preference was not saved.', 'error');
         return;
       }
       currentSettings.aiFallbackEnabled = nextValue;
       updateApiStatus();
+      setProviderSaveStatus('Fallback preference saved immediately.', 'success');
     });
 
     retrySettingsLoadBtn?.addEventListener('click', async () => {
@@ -276,11 +285,13 @@ export function createPopupSettingsController() {
             currentProvider = previousProvider;
             providerSelect.value = previousProvider;
             updateNewApiKeyProviderLabel();
+            setProviderSaveStatus('Provider preference was not saved.', 'error');
           }
           return;
         }
         if (changeToken !== providerChangeToken) return;
         currentSettings.aiProvider = nextProvider;
+        setProviderSaveStatus('Provider preference saved immediately.', 'success');
         await loadProviderFields(nextProvider);
       } finally {
         if (changeToken === providerChangeToken) modelCatalog.setProviderFieldsLoading(false);
@@ -321,6 +332,7 @@ export function createPopupSettingsController() {
           toggleNewApiKeyVisibility.setAttribute('aria-pressed', 'false');
         }
         setAiFeedback('Key added. Test it to check provider access.', 'success');
+        setProviderSaveStatus('API key saved immediately.', 'success');
         await apiKeyManager.render(currentProvider);
       } catch (error) {
         if (/storage|operation failed|context invalidated/i.test(String(error?.message || ''))) reportStorageFailure('settings');
@@ -374,7 +386,8 @@ export function createPopupSettingsController() {
         setAiFeedback('Could not save model settings. Check extension storage and try again.', 'error');
       } finally {
         if (!modelCatalog.isProviderFieldsLoading()) {
-          saveBtn.disabled = false;
+          modelCatalog.refreshSelectionSummary();
+          saveBtn.disabled = !modelCatalog.isModelSettingsDirty();
           if (providerSelect) providerSelect.disabled = false;
         }
       }
