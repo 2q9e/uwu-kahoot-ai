@@ -257,7 +257,7 @@ body.api-page .api-panel-heading .section-kicker { color: #cf9dc9; }
 body.api-page .api-panel-heading h3 { color: #fff0fa; }
 body.api-page .api-page-intro,
 body.api-page .api-page-nav,
-body.api-page .api-panel { scroll-margin-top: 22px; }
+body.api-page .api-panel { scroll-margin-top: var(--api-anchor-offset, 112px); }
 
 .dashboard-launch-row { gap: 8px; }
 .dashboard-launch { min-height: 39px; border-radius: 11px; }

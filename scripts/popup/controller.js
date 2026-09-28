@@ -12,13 +12,6 @@ const apiPageNav = document.getElementById('apiPageNav');
 const isApiPage = new URLSearchParams(location.search).get('api') === '1';
 const settingsController = createPopupSettingsController();
 const isDashboardFrame = new URLSearchParams(location.search).get('dashboard') === '1';
-const advancedApiPanels = [...document.querySelectorAll('.api-advanced-panel')];
-
-// Keep the compact layout on the dedicated API page. In the popup and dashboard
-// embed, preserve the existing behavior where all settings are already visible.
-if (!isApiPage) {
-  for (const panel of advancedApiPanels) panel.open = true;
-}
 
 apiPageNav?.addEventListener('click', event => {
   const link = event.target instanceof Element ? event.target.closest('a[href^="#"]') : null;
@@ -34,6 +27,28 @@ if (isApiPage) {
   apiPageIntro?.classList.remove('hidden');
   apiPageNav?.classList.remove('hidden');
   if (versionLabel) versionLabel.textContent = 'Provider settings';
+
+  if (apiPageNav) {
+    let anchorOffsetFrame = 0;
+    const updateApiAnchorOffset = () => {
+      anchorOffsetFrame = 0;
+      const navHeight = apiPageNav.offsetHeight;
+      const stickyTop = Number.parseFloat(getComputedStyle(apiPageNav).top) || 0;
+      const scrollGap = 12;
+      const offset = Math.ceil(navHeight + stickyTop + scrollGap);
+      document.documentElement.style.setProperty('--api-anchor-offset', `${offset}px`);
+    };
+    const scheduleApiAnchorOffsetUpdate = () => {
+      if (anchorOffsetFrame) return;
+      anchorOffsetFrame = requestAnimationFrame(updateApiAnchorOffset);
+    };
+
+    updateApiAnchorOffset();
+    if (typeof ResizeObserver !== 'undefined') {
+      new ResizeObserver(scheduleApiAnchorOffsetUpdate).observe(apiPageNav);
+    }
+    window.addEventListener('resize', scheduleApiAnchorOffsetUpdate, { passive: true });
+  }
 }
 
 if (isDashboardFrame) {
