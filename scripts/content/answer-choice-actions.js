@@ -38,6 +38,7 @@
 
     function applyHighlights(elements, answers, isMultiSelect, options) {
       const matchedElements = [];
+      let unmatchedAnswerCount = 0;
 
       for (const answer of answers) {
         let bestEl = null, bestScore = 0, secondBestScore = 0, indexFallback = null;
@@ -74,6 +75,7 @@
           log('Used the answer index to match a page option.');
           matchedElements.push({ el: indexFallback, answer, score: 50, autoClickSafe: false });
         } else {
+          unmatchedAnswerCount += 1;
           warn(`No answer match found (best score: ${bestScore}).`);
         }
       }
@@ -84,16 +86,43 @@
         return;
       }
 
-      updateStatus(options.autoClick === false ? 'Answer matched to Kahoot choices' : 'Answer matched · preparing submission',
-        `${matchedElements.length} choice${matchedElements.length === 1 ? '' : 's'} matched on the page.`,
-        { stage: options.autoClick === false ? 'highlighted' : 'matched' });
+      const hasUnsafeMatch = matchedElements.some(match => !match.autoClickSafe);
+      const hasUnmatchedAnswers = unmatchedAnswerCount > 0;
+      const needsReview = hasUnsafeMatch || hasUnmatchedAnswers;
+      let status;
+      let detail;
+      if (options.autoClick === false) {
+        status = needsReview ? 'Answer suggestion needs review' : 'Answer matched to Kahoot choices';
+      } else {
+        status = needsReview
+          ? 'Answer matched · review before submitting'
+          : 'Answer matched · preparing submission';
+      }
+      if (hasUnmatchedAnswers) {
+        detail = `${unmatchedAnswerCount} answer${unmatchedAnswerCount === 1 ? '' : 's'} could not be mapped to a visible choice. Review the suggestion and complete the selection manually.`;
+      } else if (needsReview) {
+        detail = `${matchedElements.length} choice${matchedElements.length === 1 ? '' : 's'} matched, but the match is ambiguous. Review the answer suggestion and submit manually.`;
+      } else {
+        detail = `${matchedElements.length} choice${matchedElements.length === 1 ? '' : 's'} matched on the page.`;
+      }
+      const hasVisibleHighlight = options.highlight !== false && !options.silentMode;
+      let stage = 'matched';
+      if (needsReview) stage = 'manual_review';
+      else if (options.autoClick === false) stage = hasVisibleHighlight ? 'highlighted' : 'suggested';
+      updateStatus(status, detail, {
+        stage
+      });
 
       if (options.highlight !== false && !options.silentMode) {
         const pulseHighlight = options.autoClick === false &&
           !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        for (const { el } of matchedElements) {
-          el.style.border = '3px solid #00c853';
-          el.style.boxShadow = '0 0 16px 4px rgba(0,200,83,.7)';
+        for (const { el, autoClickSafe } of matchedElements) {
+          const needsMatchReview = hasUnmatchedAnswers || !autoClickSafe;
+          const highlightColor = needsMatchReview ? '#f59e0b' : '#00c853';
+          el.style.border = `3px solid ${highlightColor}`;
+          el.style.boxShadow = needsMatchReview
+            ? '0 0 16px 4px rgba(245,158,11,.55)'
+            : '0 0 16px 4px rgba(0,200,83,.7)';
           el.style.borderRadius = '10px';
           el.style.transition = 'border-color .12s ease, box-shadow .12s ease';
           if (pulseHighlight) {
@@ -109,7 +138,7 @@
             if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
             const badge = document.createElement('div');
             badge.className = 'uwukahootai-checkmark';
-            badge.textContent = '✅';
+            badge.textContent = needsMatchReview ? '⚠️' : '✅';
             badge.style.cssText = `
               position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
               font-size:3rem; z-index:10000; pointer-events:none;
@@ -119,7 +148,7 @@
             el.appendChild(badge);
           } else {
             const check = document.createElement('span');
-            check.textContent = ' ✅';
+            check.textContent = needsMatchReview ? ' ⚠️' : ' ✅';
             check.style.cssText = 'font-size:1.2em; margin-left:6px; vertical-align:middle;';
             check.className = 'uwukahootai-checkmark';
             el.appendChild(check);
@@ -128,10 +157,12 @@
       }
 
       if (options.autoClick !== false) {
-        const matchedIndices = matchedElements.map(m => elements.indexOf(m.el)).filter(i => i >= 0);
-        if (matchedElements.some(m => !m.autoClickSafe)) {
-          warn('Auto-clicking despite at least one ambiguous match');
+        if (needsReview) {
+          warn('Automatic submission skipped because the answer set needs review.');
+          recordDiagnostic?.('ANSWER_MATCH_AMBIGUOUS', { stage: 'matching' });
+          return;
         }
+        const matchedIndices = matchedElements.map(m => elements.indexOf(m.el)).filter(i => i >= 0);
         if (isMultiSelect && matchedIndices.length > 0) {
           waitForClickable(matchedElements[0].el, () => fireMultiClick(matchedIndices, elements), options);
         } else if (matchedIndices.length > 0) {

@@ -22,6 +22,7 @@ export const DIAGNOSTIC_CATALOG = Object.freeze({
   QUESTION_DATA_UNREADABLE: ['Kahoot question data could not be read', 'The page script received question data in an unexpected format.', 'Reload the Kahoot tab and try again; share Debug details if it repeats.'],
   ANSWER_NO_CONTROLS: ['Answer controls were not found', 'The question was detected, but no answer buttons appeared in the page.', 'Wait for the answer screen to finish loading, then retry.'],
   ANSWER_NO_MATCH: ['AI answer did not match a page choice', 'The returned answer could not be mapped confidently to a visible choice.', 'Check that the choices are complete and retry.'],
+  ANSWER_MATCH_AMBIGUOUS: ['Answer match needs review', 'One or more answers could not be matched confidently to the visible choices, so automatic submission was skipped.', 'Review the answer suggestion against the visible choices, then submit manually if it is correct.'],
   ANSWER_NOT_CLICKABLE: ['Answer button did not become clickable', 'The matching choice stayed disabled or hidden.', 'Wait for Kahoot’s timer or loading state to finish, then retry.'],
   PIN_TARGET_MISSING: ['Pin target was not found', 'The map or image target was not available in the page.', 'Wait for the pin question image to load, then retry.'],
   JUMBLE_TILES_MISSING: ['Jumble tiles were not found', 'No readable tiles appeared in the page.', 'Wait for the tiles to load or reload the Kahoot tab.'],

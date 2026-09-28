@@ -42,6 +42,8 @@ export function createLiveSessionQuestion({
       matching: 'AI answer ready · checking it against Kahoot choices',
       matched: 'Answer matched · preparing the Kahoot handoff',
       highlighted: 'Answer matched · highlighted on the page',
+      suggested: 'Answer suggestion ready · review before submitting',
+      manual_review: 'Answer match is uncertain · review before submitting',
       sending: 'Sending answer over the Kahoot connection…',
       sent: 'WebSocket send succeeded · Kahoot acceptance is unconfirmed',
       send_failed: SEND_FAILED_MESSAGES[handoff.questionType] || 'Kahoot connection is not ready · the answer remains available on the page'
