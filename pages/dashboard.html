@@ -64,7 +64,12 @@
       <section class="dashboard-content" id="assistant" aria-label="UwU Kahoot AI controls">
         <div class="content-heading">
           <div><span class="eyebrow"><i></i> SESSION CONTROLS</span><h2 id="controlsTitle">Live Kahoot activity and answer settings</h2></div>
-          <span class="content-hint" id="workspaceHint">Provider keys and answer history stay in this browser profile.</span>
+          <div class="content-heading-actions">
+            <span class="content-hint" id="workspaceHint">Provider keys and answer history stay in this browser profile.</span>
+            <a class="content-api-link" href="popup.html?api=1" target="_blank" rel="noopener" aria-label="Configure provider, API keys, and models in a new tab">
+              Configure provider, keys, and models <span aria-hidden="true">↗</span>
+            </a>
+          </div>
         </div>
         <div class="app-window">
           <iframe id="dashboardApp" src="popup.html?dashboard=1" title="UwU Kahoot AI session controls" aria-describedby="controlsTitle workspaceHint" loading="eager"></iframe>

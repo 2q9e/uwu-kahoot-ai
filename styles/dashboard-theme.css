@@ -40,9 +40,13 @@ body {
   box-shadow: inset 0 1px rgba(255,255,255,.08);
 }
 .stats-nav { border-color: rgba(255, 153, 216, .2); background: rgba(205, 67, 164, .11); color: #ffb4e2; }
+.content-api-link { border-color: rgba(255, 153, 216, .3); background: linear-gradient(135deg, rgba(214, 68, 169, .2), rgba(134, 72, 177, .17)); color: #fff0fb; }
+.content-api-link span { color: #ffb1e4; }
+.content-api-link:hover { border-color: rgba(255, 153, 216, .55); box-shadow: 0 8px 26px rgba(219, 72, 175, .18), inset 0 1px rgba(255,255,255,.1); }
 .view-button:focus-visible,
 .scroll-cue:focus-visible,
 .dashboard-footer a:focus-visible { outline-color: #ff9cda; }
+.content-api-link:focus-visible { outline-color: #ff9cda; }
 
 .dashboard-hero {
   background:
