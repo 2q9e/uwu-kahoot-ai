@@ -1,7 +1,7 @@
 import { fetchOpenRouterQuota } from '../core/model-catalog.js';
 import { PROVIDER_USAGE_STORAGE_KEY } from '../core/provider-usage.js';
 
-export function createProviderQuotaUi({ providers, getProviderKey }) {
+export function createProviderQuotaUi({ providers, getProviderKey, getCurrentProvider }) {
   const providerQuota = document.getElementById('providerQuota');
   const OPENROUTER_QUOTA_URL = 'https://openrouter.ai/account';
   const GEMINI_QUOTA_URL = 'https://aistudio.google.com/rate-limit?timeRange=last-28-days';
@@ -44,9 +44,9 @@ export function createProviderQuotaUi({ providers, getProviderKey }) {
   }
 
   async function renderProviderQuota(provider, suppliedKey = '') {
-    if (!providerQuota) return;
+    if (!providerQuota || provider !== getCurrentProvider()) return;
     const token = ++renderToken;
-    const isCurrentRender = () => token === renderToken;
+    const isCurrentRender = () => token === renderToken && provider === getCurrentProvider();
     if (provider === 'gemini') {
       try {
         const stored = await chrome.storage.local.get(PROVIDER_USAGE_STORAGE_KEY);

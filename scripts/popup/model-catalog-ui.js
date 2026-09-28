@@ -77,6 +77,7 @@ export function createModelCatalogUi({ getCurrentProvider, getCurrentSettings, p
   let providerCatalog;
   const providerQuotaUi = createProviderQuotaUi({
     providers,
+    getCurrentProvider,
     getProviderKey: provider => providerCatalog.getCurrentProviderKey(provider)
   });
   const backupModelUi = createBackupModelUi({

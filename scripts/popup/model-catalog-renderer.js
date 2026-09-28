@@ -101,15 +101,19 @@ export function createModelCatalogRenderer({
 
   async function measureGeminiSpeed(model, button) {
     const key = await getCurrentProviderKey('gemini');
+    const isCurrentProvider = () => getCurrentProvider() === 'gemini';
     if (!key) {
-      setAiFeedback('Enter or save your Google AI Studio key before measuring speed.', 'error');
+      if (isCurrentProvider()) setAiFeedback('Enter or save your Google AI Studio key before measuring speed.', 'error');
       return;
     }
+    if (!isCurrentProvider()) return;
     button.disabled = true;
     button.textContent = 'Measuring 1/3…';
     try {
       const result = await measureGeminiModel(key, model.id, (done, total) => {
-        button.textContent = done >= total ? 'Summarizing…' : `Measuring ${done + 1}/${total}…`;
+        if (isCurrentProvider() && button.isConnected) {
+          button.textContent = done >= total ? 'Summarizing…' : `Measuring ${done + 1}/${total}…`;
+        }
       });
       const measuredSpeeds = getMeasuredGeminiSpeeds();
       measuredSpeeds[model.id] = { ...result, sampledAt: new Date().toISOString() };
@@ -120,14 +124,16 @@ export function createModelCatalogRenderer({
         await chrome.storage.local.set({ [GEMINI_SPEED_STORAGE_KEY]: Object.fromEntries(entries) });
       } catch (_) {  }
       onModelsUpdated('gemini', getModels('gemini'));
-      setAiFeedback(`${model.name}: median streamed TPS ${result.tokensPerSecond} candidate tok/s across ${result.sampleCount} runs · median first token ${result.firstTokenMs} ms.`, 'success');
-      renderModelCatalog();
+      if (isCurrentProvider()) {
+        setAiFeedback(`${model.name}: median streamed TPS ${result.tokensPerSecond} candidate tok/s across ${result.sampleCount} runs · median first token ${result.firstTokenMs} ms.`, 'success');
+        renderModelCatalog();
+      }
       await renderProviderQuota('gemini', key);
     } catch (error) {
-      setAiFeedback(error.message || 'Speed check failed.', 'error');
+      if (isCurrentProvider()) setAiFeedback(error.message || 'Speed check failed.', 'error');
       await renderProviderQuota('gemini', key);
     } finally {
-      button.disabled = false;
+      if (button.isConnected) button.disabled = false;
     }
   }
 
