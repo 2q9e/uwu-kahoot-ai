@@ -149,7 +149,11 @@ export function createLiveSessionQuestion({
     if (retryAnswerBtn) retryAnswerBtn.disabled = true;
     liveEmpty?.classList.remove('hidden');
     liveQuestion?.classList.add('hidden');
-    questionReadiness?.classList.add('hidden');
+    if (questionReadiness) {
+      questionReadiness.textContent = '';
+      questionReadiness.classList.add('hidden');
+      questionReadiness.removeAttribute('data-ready');
+    }
     clearAnswerHandoff();
     if (questionText) questionText.textContent = '';
     if (answerText) {
@@ -237,15 +241,7 @@ export function createLiveSessionQuestion({
     tabSession.setConnection(selectedTab.id, { url: selectedTab.url, state: 'connected' });
     tabSession.renderTabs();
     if (request.action === 'resetLiveState') {
-      hasCurrentQuestion = false;
-      clearAnswerHandoff();
-      liveQuestion?.classList.add('hidden');
-      liveEmpty?.classList.remove('hidden');
-      if (questionText) questionText.textContent = '';
-      if (answerText) {
-        answerText.textContent = 'Waiting for a response';
-        answerText.classList.remove('thinking', 'active');
-      }
+      clearSelectedQuestion();
       setLiveStatus('idle', 'Waiting for a question', request.status || '');
     }
     if (request.action === 'updateQuestion' && request.question) {
