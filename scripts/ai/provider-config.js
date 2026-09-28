@@ -16,6 +16,15 @@ export const PROVIDER_SETTINGS = {
   openrouter: { modelKey: 'openrouterModel', visionKey: 'openrouterVisionModel', backupKey: 'openrouterBackupModels', fastModelKey: 'openrouterFastModel', model: DEFAULT_OPENROUTER_MODEL, visionModel: DEFAULT_OPENROUTER_VISION_MODEL }
 };
 
+export function getProviderModelSettingKeys() {
+  return [...new Set(Object.values(PROVIDER_SETTINGS).flatMap(settings => [
+    settings.modelKey,
+    settings.visionKey,
+    settings.backupKey,
+    settings.fastModelKey
+  ]))];
+}
+
 const STYLE = 'color:#f0abfc;font-weight:bold';
 const log = (...args) => console.log('%c[AI]', STYLE, ...args);
 
@@ -36,9 +45,7 @@ export function getOpenRouterDefaultMigration(settings = {}) {
 
 export async function getAISettings() {
   const sync = await chrome.storage.sync.get([
-    'aiProvider', 'aiFallbackEnabled', 'openaiModel', 'openaiVisionModel',
-    'openaiBackupModels', 'openaiFastModel', 'geminiModel', 'geminiVisionModel', 'geminiBackupModels', 'geminiFastModel',
-    'openrouterModel', 'openrouterVisionModel', 'openrouterBackupModels', 'openrouterFastModel', 'modelReasoningEffort',
+    'aiProvider', 'aiFallbackEnabled', ...getProviderModelSettingKeys(), 'modelReasoningEffort',
     'fastBinaryAnswersEnabled'
   ]);
   const migratedModels = getOpenRouterDefaultMigration(sync);

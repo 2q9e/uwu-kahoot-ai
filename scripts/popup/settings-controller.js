@@ -9,7 +9,7 @@ import { createModelCatalogUi } from './model-catalog-ui.js';
 import { getApiStatusPresentation } from './api-status-presentation.js';
 import { wirePreferenceControls } from './preference-controls.js';
 import { DEFAULT_AI_PROVIDER, DEPRECATED_MODELS } from '../core/constants.js';
-import { getOpenRouterDefaultMigration, PROVIDER_SETTINGS } from '../ai/provider-config.js';
+import { getOpenRouterDefaultMigration, getProviderModelSettingKeys, PROVIDER_SETTINGS } from '../ai/provider-config.js';
 
 export function createPopupSettingsController() {
   const apiStatus = document.getElementById('apiStatus');
@@ -119,13 +119,7 @@ export function createPopupSettingsController() {
     const settings = await chrome.storage.sync.get([
       'highlightOption', 'autoClickOption', 'pinHighlightOption', 'pinAutoClickOption',
       'silentMode', 'answerDelay', 'aiProvider', MODEL_REASONING_STORAGE_KEY,
-      'aiFallbackEnabled',
-      'openaiModel', 'openaiVisionModel',
-      'openaiBackupModels',
-      'openaiFastModel',
-      'geminiModel', 'geminiVisionModel',
-      'geminiBackupModels', 'geminiFastModel',
-      'openrouterModel', 'openrouterVisionModel', 'openrouterBackupModels', 'openrouterFastModel',
+      'aiFallbackEnabled', ...getProviderModelSettingKeys(),
       'fastBinaryAnswersEnabled'
     ]);
     const migratedModels = getOpenRouterDefaultMigration(settings);
