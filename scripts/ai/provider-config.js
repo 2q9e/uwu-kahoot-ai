@@ -8,7 +8,7 @@ import {
 } from '../core/constants.js';
 import { getApiKeys } from '../core/storage.js';
 
-const PREVIOUS_OPENROUTER_DEFAULT = 'google/gemini-3.8-flash';
+export const PREVIOUS_OPENROUTER_DEFAULT = 'google/gemini-3.8-flash';
 export const PROVIDER_FALLBACK_ORDER = ['openrouter', 'gemini', 'openai'];
 export const PROVIDER_SETTINGS = {
   openai: { modelKey: 'openaiModel', visionKey: 'openaiVisionModel', backupKey: 'openaiBackupModels', fastModelKey: 'openaiFastModel', model: DEFAULT_MODEL, visionModel: DEFAULT_VISION_MODEL },

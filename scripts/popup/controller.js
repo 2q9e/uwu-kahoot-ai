@@ -9,16 +9,8 @@ import { initializeLiveSession, setLiveStatus } from './live-session.js';
 import { initializePopupStats } from './stats-summary.js';
 import { createApiKeyManager } from './api-key-manager-ui.js';
 import { createModelCatalogUi } from './model-catalog-ui.js';
-import {
-  DEFAULT_AI_PROVIDER,
-  DEFAULT_MODEL,
-  DEFAULT_VISION_MODEL,
-  DEFAULT_GEMINI_MODEL,
-  DEFAULT_GEMINI_VISION_MODEL,
-  DEFAULT_OPENROUTER_MODEL,
-  DEFAULT_OPENROUTER_VISION_MODEL,
-  DEPRECATED_MODELS
-} from '../core/constants.js';
+import { DEFAULT_AI_PROVIDER, DEPRECATED_MODELS } from '../core/constants.js';
+import { PREVIOUS_OPENROUTER_DEFAULT, PROVIDER_SETTINGS } from '../ai/provider-config.js';
 
 const versionLabel    = document.getElementById('versionLabel');
 const apiStatus       = document.getElementById('apiStatus');
@@ -51,28 +43,17 @@ function reportStorageFailure(stage = 'settings') {
   catch (_) {}
 }
 
-const PROVIDERS = {
-  openai: {
-    key: 'openaiApiKey', modelKey: 'openaiModel', visionKey: 'openaiVisionModel',
-    backupKey: 'openaiBackupModels', fastModelKey: 'openaiFastModel',
-    defaultModel: DEFAULT_MODEL, defaultVision: DEFAULT_VISION_MODEL,
-    keyLabel: 'OpenAI API key'
-  },
-  gemini: {
-    key: 'geminiApiKey', modelKey: 'geminiModel', visionKey: 'geminiVisionModel',
-    backupKey: 'geminiBackupModels', fastModelKey: 'geminiFastModel',
-    defaultModel: DEFAULT_GEMINI_MODEL, defaultVision: DEFAULT_GEMINI_VISION_MODEL,
-    keyLabel: 'Google AI Studio API key'
-  },
-  openrouter: {
-    key: 'openrouterApiKey', modelKey: 'openrouterModel', visionKey: 'openrouterVisionModel',
-    backupKey: 'openrouterBackupModels', fastModelKey: 'openrouterFastModel',
-    defaultModel: DEFAULT_OPENROUTER_MODEL, defaultVision: DEFAULT_OPENROUTER_VISION_MODEL,
-    keyLabel: 'OpenRouter API key'
-  }
+const PROVIDER_KEY_LABELS = {
+  openai: 'OpenAI API key',
+  gemini: 'Google AI Studio API key',
+  openrouter: 'OpenRouter API key'
 };
-
-const PREVIOUS_OPENROUTER_DEFAULT = 'google/gemini-3.8-flash';
+const PROVIDERS = Object.fromEntries(Object.entries(PROVIDER_SETTINGS).map(([provider, settings]) => [provider, {
+  ...settings,
+  defaultModel: settings.model,
+  defaultVision: settings.visionModel,
+  keyLabel: PROVIDER_KEY_LABELS[provider]
+}]));
 const isApiPage = new URLSearchParams(location.search).get('api') === '1';
 
 let currentProvider = DEFAULT_AI_PROVIDER;
@@ -228,8 +209,8 @@ async function loadSettings() {
     'fastBinaryAnswersEnabled'
   ]);
   const migratedModels = {};
-  if (settings.openrouterModel === PREVIOUS_OPENROUTER_DEFAULT) migratedModels.openrouterModel = DEFAULT_OPENROUTER_MODEL;
-  if (settings.openrouterVisionModel === PREVIOUS_OPENROUTER_DEFAULT) migratedModels.openrouterVisionModel = DEFAULT_OPENROUTER_VISION_MODEL;
+  if (settings.openrouterModel === PREVIOUS_OPENROUTER_DEFAULT) migratedModels.openrouterModel = PROVIDERS.openrouter.defaultModel;
+  if (settings.openrouterVisionModel === PREVIOUS_OPENROUTER_DEFAULT) migratedModels.openrouterVisionModel = PROVIDERS.openrouter.defaultVision;
   if (Object.keys(migratedModels).length) {
     await chrome.storage.sync.set(migratedModels);
     Object.assign(settings, migratedModels);
