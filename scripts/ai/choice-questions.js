@@ -96,6 +96,11 @@ export async function answerQuestion(title, choices, imageUrl, options = {}) {
     return choices[idx - 1];
   }
 
+  if (imageUrl) {
+    warn('Number parse failed for an image question; requiring vision context.');
+    return answerQuestionWithVision(title, choices, imageUrl, apiKey, visionModel, provider, requestContext);
+  }
+
   warn('Number parse failed; trying text fallback.');
   return await answerTextFallback(title, choices, apiKey, model, provider, requestContext);
 }
@@ -138,6 +143,10 @@ export async function answerMultiSelect(title, choices, imageUrl, options = {}) 
     log(`Multi-select parsed ${result.length} answer(s).`);
     return result;
   } catch (parseErr) {
+    if (imageUrl) {
+      warn(`Multi-select parse failed for an image question: ${parseErr.message} - retrying with vision`);
+      return answerMultiSelectWithVision(title, choices, imageUrl, apiKey, visionModel, provider, requestContext);
+    }
     warn(`Multi-select parse failed: ${parseErr.message} - single answer fallback`);
     const single = await answerTextFallback(title, choices, apiKey, model, provider, requestContext);
     return [single];
