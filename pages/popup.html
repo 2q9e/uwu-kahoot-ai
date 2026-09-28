@@ -38,7 +38,7 @@
       <div>
         <span class="section-kicker">PROVIDER SETUP</span>
         <h2 id="apiPageTitle">AI provider settings</h2>
-        <p>Choose a provider, add a key, then set your answer models. Advanced routing and model tools are below.</p>
+        <p>Choose a provider, add a key, then set your answer models. Backups, the True/False fast lane, and the model catalog are optional and can be opened when needed.</p>
       </div>
     </section>
 
@@ -227,8 +227,8 @@
           <p class="setting-note">Unsupported levels are adapted to each model’s API. Gemini 3 and 2.5 Pro cannot fully disable reasoning; “Lowest” uses their fastest supported level. Higher effort can increase response time and token use.</p>
         </div>
         </section>
-        <section id="fastBinaryPanel" class="api-panel" aria-labelledby="fastBinaryTitle">
-          <div class="api-panel-heading"><div><span class="section-kicker">RESPONSE SPEED</span><h3 id="fastBinaryTitle">Fast lane for True/False</h3></div></div>
+        <details id="fastBinaryPanel" class="api-panel api-advanced-panel">
+          <summary class="api-panel-heading"><span class="section-kicker">RESPONSE SPEED</span><h3 id="fastBinaryTitle">Fast lane for True/False</h3><span class="api-panel-optional">Optional</span></summary>
         <div class="reasoning-row fast-binary-row">
           <div class="toggle-row"><label for="fastBinaryAnswers">Use a separate fast model</label><label class="toggle"><input type="checkbox" id="fastBinaryAnswers"><span class="toggle-track"></span></label></div>
           <p class="setting-note">Runs only for exactly two choices, True and False, with no question image. A reply that is not exactly TRUE or FALSE, or a failed request, retries with your primary model.</p>
@@ -236,9 +236,9 @@
           <select id="fastBinaryModel" class="field-select" aria-label="Fast True or False model"><option value="">Automatic fastest model</option></select>
           <p id="fastBinaryModelHelp" class="setting-note">Gemini and OpenAI use the median stream TPS from three checks. OpenRouter uses the best free endpoint’s provider-reported 30-minute p50.</p>
         </div>
-        </section>
-        <section id="backupModelsPanel" class="api-panel" aria-labelledby="backupModelsTitle">
-          <div class="api-panel-heading"><div><span class="section-kicker">RECOVERY</span><h3 id="backupModelsTitle">Fallback models</h3></div></div>
+        </details>
+        <details id="backupModelsPanel" class="api-panel api-advanced-panel">
+          <summary class="api-panel-heading"><span class="section-kicker">RECOVERY</span><h3 id="backupModelsTitle">Fallback models</h3><span class="api-panel-optional">Optional</span></summary>
         <div class="model-backups">
           <div class="backup-heading">
             <div><label class="field-label" for="backupModel1">Quota and outage backups</label><p class="setting-note">Choose up to five models in the order they should be tried after a rate limit or model error.</p></div>
@@ -252,9 +252,9 @@
             <label><span>5</span><select id="backupModel5" class="field-select backup-model" data-slot="4" aria-label="Fifth backup model"><option value="">No backup</option></select></label>
           </div>
         </div>
-        </section>
-        <section id="modelCatalogPanel" class="api-panel" aria-labelledby="modelCatalogTitle">
-          <div class="api-panel-heading"><div><span class="section-kicker">MODEL LIST</span><h3 id="modelCatalogTitle">Model catalog</h3></div></div>
+        </details>
+        <details id="modelCatalogPanel" class="api-panel api-advanced-panel">
+          <summary class="api-panel-heading"><span class="section-kicker">MODEL LIST</span><h3 id="modelCatalogTitle">Model catalog</h3><span class="api-panel-optional">Optional</span></summary>
         <div class="model-catalog">
           <div class="catalog-toolbar">
             <div><label class="field-label" for="modelSearch">Find a model</label><p id="catalogHelp" class="setting-note">Gemini and OpenAI run three short streams and report median TPS plus first-token time. OpenRouter uses provider-reported free-endpoint metadata; charges or quota may apply to generation checks.</p></div>
@@ -274,7 +274,7 @@
           <div id="modelCatalogList" class="model-catalog-list" aria-label="Available models"></div>
           <button id="showMoreModels" class="btn-catalog show-more-models hidden" type="button">Show more models</button>
         </div>
-        </section>
+        </details>
         <section id="saveSettingsPanel" class="api-panel api-save-panel" aria-labelledby="saveSettingsTitle">
           <div class="api-panel-heading"><div><span class="section-kicker">SAVE CHANGES</span><h3 id="saveSettingsTitle">Save model settings</h3></div></div>
         <div id="providerQuota" class="provider-quota" role="status" aria-live="polite"></div>
