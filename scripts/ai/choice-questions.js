@@ -147,9 +147,8 @@ export async function answerMultiSelect(title, choices, imageUrl, options = {}) 
       warn(`Multi-select parse failed for an image question: ${parseErr.message} - retrying with vision`);
       return answerMultiSelectWithVision(title, choices, imageUrl, apiKey, visionModel, provider, requestContext);
     }
-    warn(`Multi-select parse failed: ${parseErr.message} - single answer fallback`);
-    const single = await answerTextFallback(title, choices, apiKey, model, provider, requestContext);
-    return [single];
+    warn(`Multi-select parse failed; refusing to submit a partial answer: ${parseErr.message}`);
+    throw parseErr;
   }
 }
 

@@ -108,8 +108,9 @@ export function createProviderFieldsLoader(dependencies) {
       const loadedBackups = draft?.backupModels ?? normalizeBackupModels(settings[config.backupKey], loadedPrimaryModel);
       backupModelUi.populateBackupSlots(providerCatalog.getModels(provider), loadedBackups, loadedPrimaryModel);
       populateFastModelOptions(provider, providerCatalog.getModels(provider), draft?.fastModel ?? settings[config.fastModelKey]);
-      await providerQuotaUi.renderProviderQuota(provider);
-      if (!isCurrentLoad()) return false;
+      // Usage details are optional; keep key and model controls available while
+      // the provider-specific quota request runs in the background.
+      void providerQuotaUi.renderProviderQuota(provider);
       refreshSelectionSummary();
       return entries.some(entry => entry.enabled) || !!settings.privateApiKeys?.[provider]?.length ||
         (settings.aiFallbackEnabled !== false && (hasSavedFallbackKey || hasPrivateFallbackKey));

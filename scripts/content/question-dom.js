@@ -2,6 +2,15 @@
   'use strict';
 
   function createQuestionDom({ domAdapter, waitForDomResult, getNonce, log }) {
+    function normalizeChoiceText(value) {
+      return String(value ?? '')
+        .normalize('NFKC')
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    }
+
     function getExpectedChoiceCount(type, choices = []) {
       const parsedCount = Array.isArray(choices) ? choices.length : 0;
       if (parsedCount >= 2) return parsedCount;
@@ -42,8 +51,15 @@
       };
       const hasStaleAnswerControls = () => questionTransition && previousDomSnapshot.length > 0 && !answerChoiceDomChanged();
 
+      const matchesPayloadChoices = choices => fallbacks.every((fallback, index) => {
+        const visible = String(choices[index] ?? '').trim();
+        if (!visible) return false;
+        if (/^image\s*\d+$/i.test(fallback)) return true;
+        return normalizeChoiceText(visible) === normalizeChoiceText(fallback);
+      });
+
       const readChoices = () => {
-        const findElements = domAdapter.findAnswerElements || domAdapter.findVisibleAnswerElements;
+        const findElements = domAdapter.findVisibleAnswerElements || domAdapter.findAnswerElements;
         const elements = findElements();
         if (elements.length < requiredCount) return null;
         const choices = elements.map(element => domAdapter.cleanButtonText(element));
@@ -56,24 +72,24 @@
       };
 
       if (fallbackIsComplete) {
-        // Kahoot's parsed payload is usually authoritative, but a brief check
-        // catches choices that appear on screen after a partial payload.
-        const readExpandedChoices = () => {
+        // Use payload choices to verify the visible answer controls, but never
+        // send from the payload alone while Kahoot is still showing old controls.
+        const readCurrentChoices = () => {
           const choices = readChoices();
-          if (!choices || choices.length <= fallbacks.length) return null;
-          return hasStaleAnswerControls() ? null : choices;
+          if (!choices || hasStaleAnswerControls() || !matchesPayloadChoices(choices)) return null;
+          return choices;
         };
-        const expandedChoices = await waitForDomResult(readExpandedChoices, {
-          timeout: 900,
+        const visibleChoices = await waitForDomResult(readCurrentChoices, {
+          timeout: 4500,
           nonce,
-          settleMs: 180
+          settleMs: questionTransition ? 650 : 180
         });
-        if (expandedChoices) {
-          log(`Additional answer choices confirmed on page: ${expandedChoices.length}`);
-          return expandedChoices;
+        if (visibleChoices) {
+          log(`Answer choices confirmed against the page: ${visibleChoices.length}`);
+          return visibleChoices;
         }
-        log(`Answer choices read from Kahoot data: ${fallbacks.length}`);
-        return fallbacks;
+        log('Kahoot data choices were not confirmed by the current answer controls.');
+        return [];
       }
 
       const choices = await waitForDomResult(() => {

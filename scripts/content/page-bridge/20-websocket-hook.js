@@ -42,6 +42,7 @@ window.WebSocket = function (url, protocols) {
 
   ws.addEventListener('close', () => {
     log('WS closed');
+    if (window.__kahootWS !== ws) return;
     window.__kahootWS = null;
     window.kahootClientId = null;
     window.kahootGameId = null;

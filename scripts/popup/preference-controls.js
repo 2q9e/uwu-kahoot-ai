@@ -30,6 +30,17 @@ export function wirePreferenceControls({
     const value = parseFloat(delaySlider.value);
     updateDelayLabel(value);
     clearTimeout(delayDebounce);
-    delayDebounce = setTimeout(() => persistSync({ answerDelay: value }), 250);
+    delayDebounce = setTimeout(() => {
+      delayDebounce = null;
+      void persistSync({ answerDelay: value });
+    }, 250);
+  });
+
+  delaySlider?.addEventListener('change', () => {
+    const value = parseFloat(delaySlider.value);
+    updateDelayLabel(value);
+    clearTimeout(delayDebounce);
+    delayDebounce = null;
+    void persistSync({ answerDelay: value });
   });
 }

@@ -93,27 +93,42 @@ export function parseMultiSelectResponse(raw, choices) {
   const text = String(raw || '');
   const lines = text.split('\n');
 
-  const yesNums = [];
+  const optionMarks = new Map();
   let hasExplicitMarks = false;
   for (const line of lines) {
     const match = line.match(/^\s*(?:[-*]\s*)?(?:option\s*)?(\d+)\s*[:.)-]\s*(YES|Y|NO|N)\b\s*$/i);
     if (!match) continue;
     hasExplicitMarks = true;
     const number = parseInt(match[1], 10);
-    if ((match[2].toUpperCase() === 'YES' || match[2].toUpperCase() === 'Y') &&
-        number >= 1 && number <= choices.length) yesNums.push(number);
+    if (number < 1 || number > choices.length) {
+      throw new Error(`The multi-select response marked an unknown option (${number}).`);
+    }
+    const isYes = match[2].toUpperCase() === 'YES' || match[2].toUpperCase() === 'Y';
+    if (optionMarks.has(number) && optionMarks.get(number) !== isYes) {
+      throw new Error(`The multi-select response gave conflicting marks for option ${number}.`);
+    }
+    optionMarks.set(number, isYes);
   }
 
   if (hasExplicitMarks) {
-    const unique = [...new Set(yesNums)].sort((a, b) => a - b);
-    if (unique.length) return unique.map(number => choices[number - 1]);
+    if (optionMarks.size !== choices.length) {
+      throw new Error(`The multi-select response marked ${optionMarks.size} of ${choices.length} options.`);
+    }
+    const yesNums = [...optionMarks]
+      .filter(([, isYes]) => isYes)
+      .map(([number]) => number)
+      .sort((a, b) => a - b);
+    if (yesNums.length) return yesNums.map(number => choices[number - 1]);
     throw new Error('No affirmative options were identified in the multi-select response.');
   }
 
   const isNumberList = /^\s*(?:[-*]\s*)?\d+(?:\s*[,;]\s*(?:[-*]\s*)?\d+)*(?:\s+and\s+\d+)?\s*$/i.test(text);
   if (isNumberList) {
     const nums = [...text.matchAll(/\b\d+\b/g)].map(match => parseInt(match[0], 10));
-    const validNums = [...new Set(nums.filter(number => number >= 1 && number <= choices.length))].sort((a, b) => a - b);
+    if (nums.some(number => number < 1 || number > choices.length)) {
+      throw new Error('The multi-select response contains an unknown option number.');
+    }
+    const validNums = [...new Set(nums)].sort((a, b) => a - b);
     if (validNums.length) return validNums.map(number => choices[number - 1]);
   }
 
