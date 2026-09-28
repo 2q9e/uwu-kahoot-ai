@@ -50,6 +50,9 @@ export async function postJsonWithRetry(url, headers, body, timeoutMs, service, 
     signal?.addEventListener('abort', onAbort, { once: true });
     const timeout = setTimeout(() => controller.abort(), Math.max(1, Math.min(timeoutMs, remainingBudget)));
     let response;
+    let data;
+    let payload;
+    let requestError;
     try {
       response = await fetch(url, {
         method: 'POST',
@@ -57,11 +60,26 @@ export async function postJsonWithRetry(url, headers, body, timeoutMs, service, 
         body: JSON.stringify(body),
         signal: controller.signal
       });
+      if (response.ok) {
+        data = await response.json();
+      } else {
+        try {
+          payload = await response.json();
+        } catch (error) {
+          if (controller.signal.aborted) throw error;
+        }
+      }
     } catch (error) {
+      requestError = error;
+    } finally {
       clearTimeout(timeout);
       signal?.removeEventListener('abort', onAbort);
+    }
+    if (requestError) {
       if (signal?.aborted) throw makeAbortError();
-      lastError = error.name === 'AbortError' ? new Error(`${service} request timed out`) : error;
+      lastError = controller.signal.aborted || requestError.name === 'AbortError'
+        ? new Error(`${service} request timed out`)
+        : requestError;
       void recordProviderUsage(provider, model, 599);
       if (attempt < MAX_RETRIES && Date.now() < (requestBudget?.deadline ?? Infinity)) {
         await retryDelay(Math.min(1000 * 2 ** attempt, 4000) * (0.5 + Math.random() * 0.5), signal);
@@ -69,18 +87,10 @@ export async function postJsonWithRetry(url, headers, body, timeoutMs, service, 
       }
       throw lastError;
     }
-    clearTimeout(timeout);
-    signal?.removeEventListener('abort', onAbort);
 
     if (response.ok) {
-      try {
-        const data = await response.json();
-        void recordProviderUsage(provider, model, 200, responseUsage(provider, data));
-        return data;
-      } catch (error) {
-        void recordProviderUsage(provider, model, 599);
-        throw error;
-      }
+      void recordProviderUsage(provider, model, 200, responseUsage(provider, data));
+      return data;
     }
     void recordProviderUsage(provider, model, response.status);
     if ((response.status === 408 || response.status >= 500) && attempt < MAX_RETRIES && Date.now() < (requestBudget?.deadline ?? Infinity)) {
@@ -89,11 +99,8 @@ export async function postJsonWithRetry(url, headers, body, timeoutMs, service, 
     }
 
     let message = `HTTP ${response.status}`;
-    try {
-      const payload = await response.json();
-      message = payload?.error?.message || payload?.error || message;
-      if (typeof message !== 'string') message = `HTTP ${response.status}`;
-    } catch {  }
+    message = payload?.error?.message || payload?.error || message;
+    if (typeof message !== 'string') message = `HTTP ${response.status}`;
     const error = new Error(`${service}: ${message}`);
     error.status = response.status;
     throw error;

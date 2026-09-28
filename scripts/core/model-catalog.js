@@ -163,17 +163,24 @@ async function fetchJson(url, headers, apiKey, label, timeoutMs = REQUEST_TIMEOU
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   let response;
+  let data;
   try {
     response = await fetch(url, { headers, signal: controller.signal, cache: 'no-store' });
+    try {
+      data = await response.json();
+    } catch (error) {
+      if (controller.signal.aborted) throw error;
+      const parseError = new Error(`${label} returned an unreadable response (HTTP ${response.status}).`);
+      parseError.code = 'UNREADABLE_RESPONSE';
+      throw parseError;
+    }
   } catch (error) {
-    if (error?.name === 'AbortError') throw new Error(`${label} request timed out.`);
+    if (controller.signal.aborted || error?.name === 'AbortError') throw new Error(`${label} request timed out.`);
+    if (error?.code === 'UNREADABLE_RESPONSE') throw error;
     throw new Error(`${label} request failed. Check the connection and try again.`);
   } finally {
     clearTimeout(timeout);
   }
-  let data;
-  try { data = await response.json(); }
-  catch { throw new Error(`${label} returned an unreadable response (HTTP ${response.status}).`); }
   if (!response.ok) {
     const message = data?.error?.message || data?.error || `HTTP ${response.status}`;
     const error = new Error(`${label}: ${safeMessage(message, apiKey)}`);
