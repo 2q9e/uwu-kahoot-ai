@@ -1,3 +1,241 @@
+/* Dashboard entrance and scroll-driven motion. */
+.js-scroll-fallback[data-mode="3d"] .hero-copy {
+  translate: 0 var(--scroll-copy-y, 0px);
+  opacity: var(--scroll-copy-opacity, 1);
+}
+.js-scroll-fallback[data-mode="3d"] .hero-stage {
+  translate: 0 var(--scroll-stage-y, 0px) var(--scroll-stage-z, 0px);
+}
+.js-scroll-fallback[data-mode="3d"] .stage-orb {
+  translate: 0 var(--scroll-orb-y, 0px);
+}
+.js-scroll-fallback[data-mode="3d"] .stage-orbit {
+  translate: 0 var(--scroll-orbit-y, 0px) var(--scroll-orbit-z, 0px);
+  opacity: var(--scroll-orbit-opacity, .55);
+}
+.js-scroll-fallback[data-mode="3d"] .stage-particles {
+  translate: 0 var(--scroll-particles-y, 0px) var(--scroll-particles-z, 0px);
+  opacity: var(--scroll-particles-opacity, 1);
+}
+.js-scroll-fallback[data-mode="3d"] .card-front {
+  translate: var(--scroll-front-x, 0px) var(--scroll-front-y, 0px) var(--scroll-front-z, 0px);
+  scale: var(--scroll-front-scale, 1);
+}
+.js-scroll-fallback[data-mode="3d"] .card-back {
+  translate: var(--scroll-back-x, 0px) var(--scroll-back-y, 0px) var(--scroll-back-z, 0px);
+  scale: var(--scroll-back-scale, 1);
+  opacity: var(--scroll-back-opacity, .36);
+}
+.js-scroll-fallback[data-mode="3d"] .stage-grid {
+  translate: 0 var(--scroll-grid-y, 0px);
+  opacity: var(--scroll-grid-opacity, .25);
+}
+
+@keyframes topbar-arrive {
+  from { opacity: 0; translate: 0 -7px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes hero-copy-arrive {
+  from { opacity: 0; translate: 0 11px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes workspace-arrive-classic {
+  from { opacity: 0; transform: translateY(14px) scale(.995); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.dashboard-topbar { animation: topbar-arrive .48s var(--motion-ease) both; }
+.hero-copy > .eyebrow { animation: hero-copy-arrive .48s var(--motion-ease) .07s both; }
+.hero-copy > h1 { animation: hero-copy-arrive .52s var(--motion-ease) .13s both; }
+.hero-copy > p { animation: hero-copy-arrive .5s var(--motion-ease) .21s both; }
+.hero-copy > .scroll-cue { animation: hero-copy-arrive .5s var(--motion-ease) .29s both; }
+.scroll-cue span { transition: transform .2s var(--motion-ease), background .2s var(--motion-ease), box-shadow .2s var(--motion-ease); }
+.dashboard-brand .brand-glyph { transition: transform .32s var(--motion-ease), box-shadow .32s var(--motion-ease), border-color .32s var(--motion-ease); }
+.dashboard-footer a { transition: color .18s var(--motion-ease), transform .18s var(--motion-ease); }
+body[data-mode="classic"] .dashboard-content .content-heading { animation: workspace-arrive-classic .45s var(--motion-ease) .04s both; }
+body[data-mode="classic"] .dashboard-content .app-window { animation: workspace-arrive-classic .55s var(--motion-ease) .1s both; }
+@media (hover: hover) and (pointer: fine) {
+  .view-button:hover { transform: translateY(-1px); }
+  .view-button[aria-pressed="true"] { box-shadow: 0 0 0 1px rgba(240,171,252,.05), 0 4px 14px rgba(192,38,211,.12); }
+  .scroll-cue:hover span { transform: translateY(2px); background: rgba(192,38,211,.12); box-shadow: 0 0 16px rgba(192,38,211,.18); }
+  .dashboard-brand:hover .brand-glyph { transform: rotate(-5deg) scale(1.04); border-color: rgba(240,171,252,.75); box-shadow: 0 0 32px rgba(192,38,211,.2), inset 0 1px rgba(255,255,255,.15); }
+  .dashboard-footer a:hover { transform: translateY(-1px); color: #f0abfc; }
+}
+.view-button:active { transform: scale(.97); }
+
+body.motion-active .hero-stage, body.motion-active .stage-orb, body.motion-active .stage-orbit,
+body.motion-active .stage-particles,
+body.motion-active .stage-particles i {
+  will-change: transform, translate, opacity;
+}
+body.motion-active .preview-choice.featured { will-change: translate; }
+body.motion-active .stage-orb { animation: orb-breathe 8s ease-in-out infinite; }
+body.motion-active .stage-orbit { animation: orbit-turn 28s linear infinite; }
+body.motion-active .stage-particles i { animation: particle-drift var(--particle-duration, 6s) ease-in-out infinite; animation-delay: var(--particle-delay, 0s); }
+body.motion-active .preview-choice.featured { animation: choice-float 3.4s ease-in-out infinite; }
+body.motion-active .stage-orbit::before { animation: orbit-sway 18s linear infinite; }
+body.motion-active .stage-orbit::after { animation: orbit-sway 25s linear infinite reverse; }
+body.motion-active .card-front::after { animation: card-sheen 8s ease-in-out infinite; }
+@keyframes orb-breathe {
+  0%, 100% { transform: translateZ(-120px) scale(.98); opacity: .67; }
+  50% { transform: translateZ(-120px) scale(1.07); opacity: .95; }
+}
+@keyframes orbit-turn {
+  from { transform: rotateX(69deg) rotateZ(-17deg) translateZ(-14px); }
+  to { transform: rotateX(69deg) rotateZ(343deg) translateZ(-14px); }
+}
+@keyframes orbit-sway { from { rotate: 0deg; } to { rotate: 360deg; } }
+@keyframes card-sheen {
+  0%, 54%, 100% { transform: translateX(0) skewX(-18deg); opacity: 0; }
+  64% { opacity: .75; }
+  82% { transform: translateX(526%) skewX(-18deg); opacity: .25; }
+}
+@keyframes choice-float {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -3px; }
+}
+@keyframes particle-drift {
+  0%, 100% { opacity: 0; transform: translate3d(0,12px,-20px) scale(.65); }
+  25%, 75% { opacity: .85; }
+  50% { opacity: .5; transform: translate3d(11px,-24px,45px) scale(1.2); }
+}
+
+
+@supports (animation-timeline: scroll(root block)) and (animation-range: 0px 1px) {
+  body[data-mode="3d"] .hero-copy {
+    animation: copy-recede linear both;
+    animation-timeline: scroll(root block);
+    animation-range: var(--hero-scroll-start, 0px) var(--hero-scroll-end, 62vh);
+  }
+  body[data-mode="3d"] .card-front {
+    animation: card-focus-in .76s cubic-bezier(.16,1,.3,1) both, card-surface linear both;
+    animation-timeline: auto, scroll(root block);
+    animation-range: normal, var(--hero-scroll-start, 0px) var(--hero-scroll-end, 62vh);
+  }
+  body[data-mode="3d"] .card-back {
+    animation: card-focus-in .84s cubic-bezier(.16,1,.3,1) .1s both, card-depth linear both;
+    animation-timeline: auto, scroll(root block);
+    animation-range: normal, var(--hero-scroll-start, 0px) var(--hero-scroll-end, 62vh);
+  }
+  body[data-mode="3d"] .hero-stage {
+    animation: stage-lift linear both;
+    animation-timeline: scroll(root block);
+    animation-range: var(--hero-scroll-start, 0px) var(--hero-scroll-end, 62vh);
+  }
+  body[data-mode="3d"] .stage-orb {
+    animation: orb-depth linear both;
+    animation-timeline: scroll(root block);
+    animation-range: var(--hero-scroll-start, 0px) var(--hero-scroll-end, 62vh);
+  }
+  body.motion-active[data-mode="3d"] .stage-orb {
+    animation: orb-breathe 8s ease-in-out infinite, orb-depth linear both;
+    animation-timeline: auto, scroll(root block);
+    animation-range: normal, var(--hero-scroll-start, 0px) var(--hero-scroll-end, 62vh);
+  }
+  body[data-mode="3d"] .stage-orbit {
+    animation: orbit-depth linear both;
+    animation-timeline: scroll(root block);
+    animation-range: var(--hero-scroll-start, 0px) var(--hero-scroll-end, 62vh);
+  }
+  body.motion-active[data-mode="3d"] .stage-orbit {
+    animation: orbit-turn 28s linear infinite, orbit-depth linear both;
+    animation-timeline: auto, scroll(root block);
+    animation-range: normal, var(--hero-scroll-start, 0px) var(--hero-scroll-end, 62vh);
+  }
+  body[data-mode="3d"] .stage-particles {
+    animation: particle-field-depth linear both;
+    animation-timeline: scroll(root block);
+    animation-range: var(--hero-scroll-start, 0px) var(--hero-scroll-end, 62vh);
+  }
+  body[data-mode="3d"] .stage-grid {
+    animation: grid-recede linear both;
+    animation-timeline: scroll(root block);
+    animation-range: var(--hero-scroll-start, 0px) var(--hero-scroll-end, 62vh);
+  }
+  body[data-mode="3d"] .scroll-progress span {
+    animation: progress-draw linear both;
+    animation-timeline: scroll(root block);
+    animation-range: var(--hero-scroll-start, 0px) var(--hero-scroll-end, 62vh);
+  }
+  body[data-mode="3d"] .dashboard-content .app-window {
+    animation: workspace-arrive linear both;
+    animation-timeline: view(block);
+    animation-range: entry 0% entry 75%;
+  }
+  body[data-mode="3d"] .dashboard-content .content-heading {
+    animation: heading-arrive linear both;
+    animation-timeline: view(block);
+    animation-range: entry 0% entry 70%;
+  }
+  @keyframes copy-recede {
+    from { translate: 0 0; opacity: 1; }
+    to { translate: 0 -46px; opacity: .22; }
+  }
+  @keyframes card-surface {
+    from { transform: translate3d(0,0,42px) rotateY(-13deg) rotateX(5deg) rotateZ(3deg) scale(.96); }
+    55% { transform: translate3d(8px,-16px,92px) rotateY(-3deg) rotateX(1deg) rotateZ(0deg) scale(1.02); }
+    to { transform: translate3d(10px,-30px,142px) rotateY(6deg) rotateX(-2deg) rotateZ(-2deg) scale(1.07); }
+  }
+  @keyframes card-depth {
+    from { transform: translate3d(-10px,0,-105px) rotateY(17deg) rotateX(3deg) rotateZ(-7deg); opacity: .36; }
+    to { transform: translate3d(-28px,76px,-220px) rotateY(8deg) rotateX(-1deg) rotateZ(2deg) scale(.9); opacity: .1; }
+  }
+  @keyframes stage-lift {
+    from { translate: 0 0 0; }
+    to { translate: 0 -15px -28px; }
+  }
+  @keyframes orb-depth {
+    from { translate: 0 0 0; }
+    to { translate: 0 -18px 22px; }
+  }
+  @keyframes orbit-depth {
+    from { translate: 0 0 0; opacity: .55; }
+    to { translate: 0 -10px -32px; opacity: .32; }
+  }
+  @keyframes particle-field-depth {
+    from { translate: 0 0 0; opacity: 1; }
+    to { translate: 0 -22px -55px; opacity: .42; }
+  }
+  @keyframes workspace-arrive {
+    from { transform: perspective(1300px) translate3d(0,35px,-75px) rotateX(5deg) scale(.98); opacity: .45; }
+    to { transform: perspective(1300px) translate3d(0,0,0) rotateX(0) scale(1); opacity: 1; }
+  }
+  @keyframes heading-arrive {
+    from { transform: translate3d(0,28px,-35px); opacity: .25; }
+    to { transform: translate3d(0,0,0); opacity: 1; }
+  }
+  @keyframes grid-recede {
+    from { translate: 0 0; opacity: .25; }
+    to { translate: 0 82px; opacity: .025; }
+  }
+  @keyframes progress-draw {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+}
+
+@media (max-width: 780px) {
+  body[data-mode="3d"] .hero-copy,
+  body[data-mode="3d"] .card-front,
+  body[data-mode="3d"] .card-back,
+  body[data-mode="3d"] .hero-stage,
+  body[data-mode="3d"] .stage-grid,
+  body[data-mode="3d"] .stage-orb,
+  body[data-mode="3d"] .stage-orbit,
+  body[data-mode="3d"] .stage-particles,
+  body[data-mode="3d"] .scroll-progress span { animation-range: var(--hero-scroll-start, 0px) var(--hero-scroll-end, 62svh); }
+}
+@media (max-width: 460px) {
+  body[data-mode="3d"] .hero-copy,
+  body[data-mode="3d"] .card-front,
+  body[data-mode="3d"] .card-back,
+  body[data-mode="3d"] .hero-stage,
+  body[data-mode="3d"] .stage-grid,
+  body[data-mode="3d"] .stage-orb,
+  body[data-mode="3d"] .stage-orbit,
+  body[data-mode="3d"] .stage-particles,
+  body[data-mode="3d"] .scroll-progress span { animation-range: var(--hero-scroll-start, 0px) var(--hero-scroll-end, 58svh); }
+}
+
 .hero-stage {
   --pointer-spot-x: 50%;
   --pointer-spot-y: 42%;
@@ -70,20 +308,6 @@ body.workspace-reveal-ready[data-mode="3d"] .dashboard-content .app-window.is-en
 
 body.workspace-reveal-ready[data-mode="3d"] .dashboard-content .app-window { transition-delay: .11s; }
 
-@supports (animation-timeline: scroll(root block)) and (animation-range: 0px 1px) {
-  body[data-mode="3d"] .card-front {
-    animation: card-focus-in .76s cubic-bezier(.16,1,.3,1) both, card-surface linear both;
-    animation-timeline: auto, scroll(root block);
-    animation-range: normal, var(--hero-scroll-start, 0px) var(--hero-scroll-end, 62vh);
-  }
-
-  body[data-mode="3d"] .card-back {
-    animation: card-focus-in .84s cubic-bezier(.16,1,.3,1) .1s both, card-depth linear both;
-    animation-timeline: auto, scroll(root block);
-    animation-range: normal, var(--hero-scroll-start, 0px) var(--hero-scroll-end, 62vh);
-  }
-}
-
 @media (hover: hover) and (pointer: fine) {
   .card-front { transition: border-color .28s ease, box-shadow .32s ease; }
   .hero-stage:hover .card-front {
@@ -108,4 +332,27 @@ body.workspace-reveal-ready[data-mode="3d"] .dashboard-content .app-window { tra
     transform: none;
     transition: none;
   }
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  :root { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
+  .dashboard-hero { height: auto; min-height: 0; }
+  .hero-sticky { position: relative; top: auto; height: auto; min-height: 0; padding-top: 42px; padding-bottom: 82px; }
+  .hero-stage { height: clamp(320px, 52vh, 580px); min-height: 320px; }
+  .scroll-progress { display: none; }
+  .js-scroll-fallback .hero-copy,
+  .js-scroll-fallback .hero-stage,
+  .js-scroll-fallback .stage-orb,
+  .js-scroll-fallback .stage-orbit,
+  .js-scroll-fallback .stage-particles,
+  .js-scroll-fallback .card-front,
+  .js-scroll-fallback .card-back,
+  .js-scroll-fallback .stage-grid { translate: none; scale: 1; }
+  .js-scroll-fallback .hero-copy { opacity: 1; }
+  .js-scroll-fallback .card-back { opacity: .36; }
+  .js-scroll-fallback .stage-orbit { opacity: .55; }
+  .js-scroll-fallback .stage-particles { opacity: 1; }
+  .js-scroll-fallback .stage-grid { opacity: .25; }
 }

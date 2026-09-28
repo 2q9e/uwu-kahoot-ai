@@ -16,13 +16,16 @@
         <img class="brand-glyph" src="../icons/icon48.png" alt="" aria-hidden="true">
         <span><strong>UwU Kahoot AI</strong><small>QUIZ COMPANION</small></span>
       </a>
-      <div class="view-control" role="group" aria-label="Dashboard appearance">
-        <span class="view-label">View</span>
+      <div class="view-control" role="group" aria-label="Dashboard display mode">
+        <span class="view-label">Display</span>
         <button class="view-button" type="button" data-mode="classic" aria-pressed="false">Classic</button>
         <button class="view-button" type="button" data-mode="3d" aria-pressed="true">3D scroll</button>
+      </div>
+      <nav class="dashboard-nav" aria-label="Dashboard navigation">
+        <a class="view-button controls-nav" href="#assistant">Live controls</a>
         <a class="view-button stats-nav" href="popup.html?api=1" target="_blank" rel="noopener">API setup</a>
         <a class="view-button stats-nav" href="stats.html">Stats</a>
-      </div>
+      </nav>
       <span class="mode-save-status" id="modeSaveStatus" role="status" aria-live="polite"></span>
     </header>
 
@@ -33,7 +36,7 @@
             <span class="eyebrow"><i></i> KAHOOT SESSION CONTROL</span>
             <h1 id="heroTitle">From question<br>to AI answer.</h1>
             <p>Check the attached Kahoot tab, detected choices, answer status, and provider settings.</p>
-            <a class="scroll-cue" href="#assistant">Scroll to open session controls <span aria-hidden="true">↓</span></a>
+            <a class="scroll-cue" href="#assistant">Skip intro and open session controls <span aria-hidden="true">↓</span></a>
           </div>
           <div class="hero-stage" aria-hidden="true">
             <div class="stage-orb"></div>
@@ -60,11 +63,11 @@
 
       <section class="dashboard-content" id="assistant" aria-label="UwU Kahoot AI controls">
         <div class="content-heading">
-          <div><span class="eyebrow"><i></i> SESSION CONTROLS</span><h2>Live Kahoot activity and answer settings</h2></div>
-          <span class="content-hint">Provider keys and answer history stay in this browser profile.</span>
+          <div><span class="eyebrow"><i></i> SESSION CONTROLS</span><h2 id="controlsTitle">Live Kahoot activity and answer settings</h2></div>
+          <span class="content-hint" id="workspaceHint">Provider keys and answer history stay in this browser profile.</span>
         </div>
         <div class="app-window">
-          <iframe id="dashboardApp" src="popup.html?dashboard=1" title="UwU Kahoot AI quiz dashboard" loading="eager"></iframe>
+          <iframe id="dashboardApp" src="popup.html?dashboard=1" title="UwU Kahoot AI session controls" aria-describedby="controlsTitle workspaceHint" loading="eager"></iframe>
         </div>
       </section>
     </main>
