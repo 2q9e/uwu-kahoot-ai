@@ -94,22 +94,27 @@ export function parseMultiSelectResponse(raw, choices) {
   const lines = text.split('\n');
 
   const yesNums = [];
+  let hasExplicitMarks = false;
   for (const line of lines) {
-    const match = line.match(/(\d+)\s*:\s*(YES|Y)\b/i);
+    const match = line.match(/^\s*(?:[-*]\s*)?(?:option\s*)?(\d+)\s*[:.)-]\s*(YES|Y|NO|N)\b\s*$/i);
     if (!match) continue;
+    hasExplicitMarks = true;
     const number = parseInt(match[1], 10);
-    if (number >= 1 && number <= choices.length) yesNums.push(number);
+    if ((match[2].toUpperCase() === 'YES' || match[2].toUpperCase() === 'Y') &&
+        number >= 1 && number <= choices.length) yesNums.push(number);
   }
 
-  if (yesNums.length > 0) {
+  if (hasExplicitMarks) {
     const unique = [...new Set(yesNums)].sort((a, b) => a - b);
-    return unique.map(number => choices[number - 1]);
+    if (unique.length) return unique.map(number => choices[number - 1]);
+    throw new Error('No affirmative options were identified in the multi-select response.');
   }
 
-  const nums = [...text.matchAll(/\b\d+\b/g)].map(match => parseInt(match[0], 10));
-  const validNums = [...new Set(nums.filter(number => number >= 1 && number <= choices.length))].sort((a, b) => a - b);
-  if (validNums.length > 0) {
-    return validNums.map(number => choices[number - 1]);
+  const isNumberList = /^\s*(?:[-*]\s*)?\d+(?:\s*[,;]\s*(?:[-*]\s*)?\d+)*(?:\s+and\s+\d+)?\s*$/i.test(text);
+  if (isNumberList) {
+    const nums = [...text.matchAll(/\b\d+\b/g)].map(match => parseInt(match[0], 10));
+    const validNums = [...new Set(nums.filter(number => number >= 1 && number <= choices.length))].sort((a, b) => a - b);
+    if (validNums.length) return validNums.map(number => choices[number - 1]);
   }
 
   throw new Error(`Could not parse multi-select answer: "${raw}"`);
