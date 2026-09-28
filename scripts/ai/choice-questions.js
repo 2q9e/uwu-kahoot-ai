@@ -83,8 +83,8 @@ export async function answerQuestion(title, choices, imageUrl, options = {}) {
       return await answerQuestionWithVision(title, choices, imageUrl, apiKey, visionModel, provider, requestContext);
     } catch (visionErr) {
       if (requestContext.signal?.aborted || visionErr?.name === 'AbortError') throw makeAbortError();
-      warn(`Vision fallback failed: ${visionErr.message} — guessing from text`);
-      return await answerTextFallback(title, choices, apiKey, model, provider, requestContext);
+      warn(`Required vision fallback failed: ${visionErr.message}`);
+      throw visionErr;
     }
   }
 
@@ -128,9 +128,8 @@ export async function answerMultiSelect(title, choices, imageUrl, options = {}) 
       return await answerMultiSelectWithVision(title, choices, imageUrl, apiKey, visionModel, provider, requestContext);
     } catch (visionErr) {
       if (requestContext.signal?.aborted || visionErr?.name === 'AbortError') throw makeAbortError();
-      warn(`Vision multi-select failed: ${visionErr.message} — guessing from text`);
-      const single = await answerTextFallback(title, choices, apiKey, model, provider, requestContext);
-      return [single];
+      warn(`Required multi-select vision fallback failed: ${visionErr.message}`);
+      throw visionErr;
     }
   }
 
