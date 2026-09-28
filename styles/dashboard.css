@@ -154,6 +154,7 @@ a { color: inherit; }
 .content-api-link:focus-visible { outline: 2px solid var(--brand-violet); outline-offset: 4px; }
 .app-window { overflow: hidden; border: 1px solid rgba(194,255,221,.16); border-radius: 18px; background: #111513; box-shadow: 0 36px 110px rgba(0,0,0,.54), 0 0 80px rgba(192,38,211,.065); transform-style: preserve-3d; }
 #dashboardApp { display: block; width: 100%; min-height: 620px; height: 900px; border: 0; background: #111113; }
+#top,
 #assistant { scroll-margin-top: calc(var(--dashboard-header-height, 74px) + 14px); }
 .dashboard-footer { display: flex; align-items: center; gap: 20px; width: calc(100% - 48px); max-width: 1160px; margin: 0 auto; padding: 22px 0 32px; border-top: 1px solid rgba(255,255,255,.07); color: #718079; font-size: 8px; font-weight: 800; letter-spacing: 1.2px; }
 .dashboard-footer > span:first-child { color: #b5c5bc; font-size: 10px; letter-spacing: .2px; }
