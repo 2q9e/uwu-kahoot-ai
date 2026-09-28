@@ -29,10 +29,10 @@
       <section class="dashboard-hero" aria-labelledby="heroTitle">
         <div class="hero-sticky">
           <div class="hero-copy">
-            <span class="eyebrow"><i></i> YOUR QUIZ, IN FOCUS</span>
-            <h1 id="heroTitle">A clearer view<br>of every session.</h1>
-            <p>Live question status, answer controls, and AI providers in one workspace.</p>
-            <a class="scroll-cue" href="#assistant">Scroll to explore your workspace <span aria-hidden="true">↓</span></a>
+            <span class="eyebrow"><i></i> KAHOOT SESSION CONTROL</span>
+            <h1 id="heroTitle">From question<br>to AI answer.</h1>
+            <p>Check the attached Kahoot tab, detected choices, answer status, and provider settings.</p>
+            <a class="scroll-cue" href="#assistant">Scroll to open session controls <span aria-hidden="true">↓</span></a>
           </div>
           <div class="hero-stage" aria-hidden="true">
             <div class="stage-orb"></div>
@@ -40,32 +40,29 @@
             <div class="stage-grid"></div>
             <div class="stage-particles"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
             <div class="glass-card card-back">
-              <span class="preview-kicker">SIGNAL CHECK</span>
-              <strong>Built around the live question.</strong>
-              <p class="preview-copy">Question context and visible choices are checked before an answer request starts.</p>
+              <span class="preview-kicker">CHOICE CHECK</span>
+              <strong>Wait for readable choices.</strong>
+              <p class="preview-copy">Question text and available answer choices are checked before an answer request starts.</p>
             </div>
             <div class="glass-card card-front">
-              <div class="preview-card-top"><span>ANSWER PIPELINE</span><b>3 STEPS</b></div>
-              <strong>From question to answer.</strong>
-              <div class="preview-choice featured"><i>01</i><span>Detect the question</span><small>CAPTURE</small></div>
-              <div class="preview-choice"><i>02</i><span>Verify answer choices</span><small>CHECK</small></div>
-              <div class="preview-choice"><i>03</i><span>Route to your AI</span><small>RESPOND</small></div>
+              <div class="preview-card-top"><span>QUESTION FLOW</span><b>LIVE TAB</b></div>
+              <strong>From Kahoot tab to answer.</strong>
+              <div class="preview-choice featured"><i>01</i><span>Read question from tab</span><small>CAPTURE</small></div>
+              <div class="preview-choice"><i>02</i><span>Check available choices</span><small>VERIFY</small></div>
+              <div class="preview-choice"><i>03</i><span>Send to selected provider</span><small>ANSWER</small></div>
             </div>
-            <div class="float-chip chip-fast"><span>↗</span> QUICK CONTROLS</div>
-            <div class="float-chip chip-ai"><span>✦</span> AI ROUTING</div>
           </div>
-          <div class="hero-footnote"><span>01</span><span>SCROLL TO MOVE THROUGH THE SCENE</span><span class="foot-line"></span></div>
+          <div class="hero-footnote"><span>QUESTION FLOW</span><span class="foot-line"></span></div>
           <div class="scroll-progress" aria-hidden="true"><span></span></div>
         </div>
       </section>
 
       <section class="dashboard-content" id="assistant" aria-label="UwU Kahoot AI controls">
         <div class="content-heading">
-          <div><span class="eyebrow"><i></i> WORKSPACE</span><h2>Quiz dashboard</h2></div>
-          <span class="content-hint">Preferences use extension storage; API keys and stats stay in this profile.</span>
+          <div><span class="eyebrow"><i></i> SESSION CONTROLS</span><h2>Live Kahoot activity and answer settings</h2></div>
+          <span class="content-hint">Provider keys and answer history stay in this browser profile.</span>
         </div>
         <div class="app-window">
-          <div class="window-bar" aria-hidden="true"><span></span><span></span><span></span><b>UwU Kahoot AI · Workspace</b></div>
           <iframe id="dashboardApp" src="popup.html?dashboard=1" title="UwU Kahoot AI quiz dashboard" loading="eager"></iframe>
         </div>
       </section>

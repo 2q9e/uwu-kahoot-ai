@@ -8,9 +8,8 @@
 body {
   position: relative;
   background:
-    radial-gradient(850px 580px at 79% 0%, rgba(222, 68, 174, .2), transparent 66%),
-    radial-gradient(780px 620px at -12% 55%, rgba(143, 75, 194, .16), transparent 69%),
-    radial-gradient(780px 520px at 85% 95%, rgba(151, 58, 148, .12), transparent 70%),
+    radial-gradient(850px 580px at 79% 0%, rgba(222, 68, 174, .12), transparent 66%),
+    radial-gradient(780px 620px at -12% 55%, rgba(143, 75, 194, .08), transparent 69%),
     #100913;
 }
 body::before {
@@ -55,39 +54,11 @@ body::before {
 }
 .secondary-link { color: #e7d4f2; }
 .intro {
-  position: relative;
   display: flex;
-  min-height: clamp(300px, 45vh, 480px);
+  min-height: clamp(220px, 29vh, 300px);
   flex-direction: column;
   justify-content: center;
-  padding-block: clamp(54px, 8vw, 100px) 48px;
-  isolation: isolate;
-}
-.intro::before {
-  position: absolute;
-  z-index: -1;
-  top: 51%;
-  right: 3%;
-  width: clamp(180px, 32vw, 360px);
-  aspect-ratio: 1;
-  border: 1px solid rgba(255, 152, 216, .1);
-  border-radius: 50%;
-  background: radial-gradient(circle at 42% 38%, rgba(247, 93, 187, .15), rgba(134, 68, 171, .07) 42%, transparent 68%);
-  box-shadow: 0 0 70px rgba(209, 54, 157, .08), inset 0 0 50px rgba(153, 77, 189, .09);
-  content: "";
-  transform: translateY(-50%);
-}
-.intro::after {
-  position: absolute;
-  z-index: -1;
-  top: 51%;
-  right: calc(3% + clamp(28px, 5vw, 56px));
-  width: clamp(120px, 21vw, 240px);
-  aspect-ratio: 1;
-  border: 1px solid rgba(198, 150, 255, .13);
-  border-radius: 50%;
-  content: "";
-  transform: translateY(-50%) rotateX(66deg) rotateZ(-25deg);
+  padding-block: clamp(36px, 5vw, 58px) 28px;
 }
 .intro .eyebrow { color: #d7bdd9; }
 .intro h1 {
@@ -106,30 +77,19 @@ body::before {
   position: relative;
   overflow: hidden;
   border-color: rgba(255, 167, 224, .15);
-  border-radius: 21px;
-  background: linear-gradient(148deg, rgba(51, 28, 59, .88), rgba(21, 13, 27, .92));
-  box-shadow: 0 24px 60px rgba(4, 1, 7, .25), inset 0 1px rgba(255,255,255,.065);
+  border-radius: 16px;
+  background: #211529;
+  box-shadow: inset 0 1px rgba(255,255,255,.045);
   transform-style: preserve-3d;
-}
-.metric-card::before,
-.recent-card::before {
-  position: absolute;
-  inset: 0 0 auto;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 198, 235, .32), transparent);
-  content: "";
-  pointer-events: none;
 }
 .metric-card { min-height: 172px; padding: 22px; }
 .metric-primary {
   border-color: rgba(255, 149, 215, .34);
-  background: radial-gradient(ellipse at 86% 2%, rgba(240, 89, 186, .23), transparent 52%), linear-gradient(145deg, rgba(83, 37, 82, .94), rgba(32, 16, 38, .96));
-  box-shadow: 0 28px 72px rgba(7, 1, 9, .31), 0 0 38px rgba(204, 54, 153, .1), inset 0 1px rgba(255,255,255,.1);
+  background: #321d35;
 }
 .metric-label { color: #dcc7df; letter-spacing: .4px; }
 .metric-card strong {
   color: #fff5fc;
-  text-shadow: 0 6px 24px rgba(225, 91, 181, .13);
   transform: translateZ(24px);
 }
 .metric-card small { color: #baa9c0; }
@@ -141,15 +101,14 @@ body::before {
 .recent-item {
   border-color: rgba(255, 181, 231, .105);
   border-radius: 14px;
-  background: linear-gradient(110deg, rgba(47, 28, 55, .69), rgba(25, 16, 31, .77));
-  box-shadow: inset 0 1px rgba(255,255,255,.035);
+  background: #1b1221;
 }
 .recent-question { color: #f6eaf5; }
 .recent-answer { color: #ff9bd8; }
 .recent-meta { color: #bba8c2; }
 .empty-state {
   border: 1px solid rgba(255, 163, 222, .16);
-  background: radial-gradient(ellipse at 50% 0%, rgba(204, 62, 158, .1), transparent 70%), rgba(14, 8, 18, .42);
+  background: #1a101e;
   color: #d2bfd7;
 }
 .stats-shell > footer {
@@ -163,7 +122,7 @@ body::before {
   .metric-card:hover,
   .recent-card:hover {
     border-color: rgba(255, 160, 220, .34);
-    box-shadow: 0 32px 78px rgba(3, 1, 6, .35), 0 0 28px rgba(214, 64, 164, .1), inset 0 1px rgba(255,255,255,.09);
+    box-shadow: 0 18px 38px rgba(3, 1, 6, .28), inset 0 1px rgba(255,255,255,.07);
     transform: perspective(1100px) rotateX(var(--card-tilt-y, 0deg)) rotateY(var(--card-tilt-x, 0deg)) translateY(-3px);
   }
   .recent-item:hover { border-color: rgba(255, 160, 220, .26); }
@@ -206,9 +165,7 @@ body::before {
   .stats-shell { width: min(100% - 24px, 560px); }
   .stats-nav { gap: 6px; }
   .back-link { padding-inline: 10px; font-size: 10px; }
-  .intro { min-height: 300px; }
-  .intro::before { right: 0; opacity: .7; }
-  .intro::after { right: 25px; opacity: .75; }
+  .intro { min-height: 220px; }
   .metric-card { min-height: 130px; }
 }
 

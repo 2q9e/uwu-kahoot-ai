@@ -69,8 +69,8 @@ a { color: inherit; }
   position: relative;
   display: block;
   width: 100%;
-  height: 168vh;
-  min-height: 1180px;
+  height: 136vh;
+  min-height: 980px;
   margin: 0;
   padding: 0;
   isolation: isolate;
@@ -129,10 +129,6 @@ a { color: inherit; }
 .preview-choice.featured { border-color: rgba(240,171,252,.24); background: linear-gradient(90deg, rgba(192,38,211,.16), rgba(192,38,211,.035)); color: #fae8ff; translate: 0 0; }
 .preview-choice.featured i { background: rgba(192,38,211,.25); color: var(--brand-violet); }
 .preview-choice.featured small { color: var(--brand-violet); }
-.float-chip { position: absolute; z-index: 3; display: flex; align-items: center; gap: 8px; padding: 10px 13px; border: 1px solid rgba(207,255,229,.16); border-radius: 10px; background: rgba(12,21,16,.83); box-shadow: 0 12px 36px rgba(0,0,0,.34); color: #bccac2; font-size: 8px; font-weight: 800; letter-spacing: .8px; transform: translateZ(110px); translate: 0 0; }
-.float-chip span { color: var(--brand-violet); font-size: 13px; }
-.chip-fast { top: 18%; right: 1%; }
-.chip-ai { bottom: 20%; left: 8%; }
 .hero-footnote { position: absolute; right: 22px; bottom: 24px; left: 22px; display: flex; align-items: center; gap: 12px; color: #68776f; font-size: 8px; font-weight: 800; letter-spacing: 1.3px; }
 .hero-footnote > span:first-child { color: var(--brand-violet); }
 .foot-line { width: 55px; height: 1px; background: linear-gradient(90deg, rgba(240,171,252,.65), transparent); }
@@ -178,10 +174,6 @@ a { color: inherit; }
 .content-heading h2 { margin: 8px 0 0; color: #eff8f2; font-size: clamp(22px, 3vw, 31px); letter-spacing: -1.2px; }
 .content-hint { padding-bottom: 4px; color: #86958d; font-size: 10px; }
 .app-window { overflow: hidden; border: 1px solid rgba(194,255,221,.16); border-radius: 18px; background: #111513; box-shadow: 0 36px 110px rgba(0,0,0,.54), 0 0 80px rgba(192,38,211,.065); transform-style: preserve-3d; }
-.window-bar { display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-bottom: 1px solid rgba(255,255,255,.06); background: rgba(255,255,255,.025); }
-.window-bar > span { width: 6px; aspect-ratio: 1; border-radius: 50%; background: #38433d; }
-.window-bar > span:first-child { background: #517a63; }
-.window-bar b { margin: 0 auto; padding-right: 22px; color: #75847b; font-size: 8px; font-weight: 600; letter-spacing: .3px; }
 #dashboardApp { display: block; width: 100%; min-height: 620px; height: 900px; border: 0; background: #111113; }
 #assistant { scroll-margin-top: calc(var(--dashboard-header-height, 74px) + 14px); }
 .dashboard-footer { display: flex; align-items: center; gap: 20px; width: calc(100% - 48px); max-width: 1160px; margin: 0 auto; padding: 22px 0 32px; border-top: 1px solid rgba(255,255,255,.07); color: #718079; font-size: 8px; font-weight: 800; letter-spacing: 1.2px; }
@@ -231,12 +223,10 @@ body.motion-active .stage-particles,
 body.motion-active .stage-particles i {
   will-change: transform, translate, opacity;
 }
-body.motion-active .float-chip, body.motion-active .preview-choice.featured { will-change: translate; }
+body.motion-active .preview-choice.featured { will-change: translate; }
 body.motion-active .stage-orb { animation: orb-breathe 8s ease-in-out infinite; }
 body.motion-active .stage-orbit { animation: orbit-turn 28s linear infinite; }
 body.motion-active .stage-particles i { animation: particle-drift var(--particle-duration, 6s) ease-in-out infinite; animation-delay: var(--particle-delay, 0s); }
-body.motion-active .float-chip { animation: chip-hover 5.5s ease-in-out infinite; }
-body.motion-active .chip-ai { animation-delay: -2.4s; }
 body.motion-active .preview-choice.featured { animation: choice-float 3.4s ease-in-out infinite; }
 body.motion-active .stage-orbit::before { animation: orbit-sway 18s linear infinite; }
 body.motion-active .stage-orbit::after { animation: orbit-sway 25s linear infinite reverse; }
@@ -254,10 +244,6 @@ body.motion-active .card-front::after { animation: card-sheen 8s ease-in-out inf
   0%, 54%, 100% { transform: translateX(0) skewX(-18deg); opacity: 0; }
   64% { opacity: .75; }
   82% { transform: translateX(526%) skewX(-18deg); opacity: .25; }
-}
-@keyframes chip-hover {
-  0%, 100% { translate: 0 0; }
-  50% { translate: 0 -8px; }
 }
 @keyframes choice-float {
   0%, 100% { translate: 0 0; }
@@ -392,7 +378,7 @@ body.motion-active .card-front::after { animation: card-sheen 8s ease-in-out inf
   .glass-card { backdrop-filter: blur(8px); box-shadow: 0 20px 60px rgba(0,0,0,.46), inset 0 1px rgba(255,255,255,.09); }
   .stage-orb { filter: blur(3px); }
   .stage-particles i:nth-child(n + 5) { display: none; }
-  .dashboard-hero { height: 154vh; height: 154svh; min-height: 1080px; }
+  .dashboard-hero { height: 128vh; height: 128svh; min-height: 900px; }
   .hero-sticky { top: var(--dashboard-header-height, 66px); grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); width: calc(100% - 30px); max-width: 620px; height: calc(100svh - var(--dashboard-header-height, 66px)); min-height: 560px; padding: 36px 5px 84px; }
   .hero-copy { padding-bottom: 0; }
   .hero-copy h1 { font-size: clamp(46px, 12vw, 70px); }
@@ -419,14 +405,12 @@ body.motion-active .card-front::after { animation: card-sheen 8s ease-in-out inf
   .view-button { min-height: 28px; padding-inline: 10px; font-size: 10px; }
   .dashboard-brand strong { font-size: 12px; }
   .dashboard-brand small { letter-spacing: .8px; }
-  .dashboard-hero { height: 155vh; height: 155svh; min-height: 1000px; }
+  .dashboard-hero { height: 126vh; height: 126svh; min-height: 820px; }
   .hero-sticky { top: var(--dashboard-header-height, 104px); height: calc(100svh - var(--dashboard-header-height, 104px)); min-height: 560px; padding-top: 28px; }
   .hero-stage { height: min(400px, 48svh); min-height: 330px; margin-inline: -18px; }
   .card-front { top: 23%; left: 15%; width: 78%; min-height: 290px; padding: 17px; }
   .card-back { display: none; }
   .card-front > strong { margin: 24px 0 19px; font-size: 22px; }
-  .chip-fast { top: 3%; right: 5%; }
-  .chip-ai { bottom: 3%; left: 5%; }
   .content-hint { font-size: 9px; }
   body[data-mode="3d"] .hero-copy,
   body[data-mode="3d"] .card-front,

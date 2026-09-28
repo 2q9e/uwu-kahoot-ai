@@ -237,7 +237,7 @@ body.api-page .api-page-intro h2 { color: #fff0fa; }
 body.api-page .api-page-nav {
   border-color: rgba(255, 157, 218, .17);
   background: rgba(39, 22, 46, .7);
-  box-shadow: 0 12px 30px rgba(5, 2, 9, .15), inset 0 1px rgba(255,255,255,.04);
+  box-shadow: none;
 }
 body.api-page .api-page-nav a { color: #dbc7df; }
 body.api-page .api-page-nav a:hover,
@@ -248,19 +248,12 @@ body.api-page .api-page-nav .api-page-exit {
 }
 body.api-page .api-panel {
   border-color: rgba(255, 157, 218, .14);
-  background: linear-gradient(150deg, rgba(47, 26, 56, .84), rgba(22, 14, 29, .92));
-  box-shadow: 0 20px 44px rgba(3, 1, 7, .22), inset 0 1px rgba(255,255,255,.045);
-}
-body.api-page .api-panel::before {
-  background: linear-gradient(180deg, #ff9edb, rgba(169, 95, 215, .12));
+  border-left: 2px solid rgba(255, 137, 211, .48);
+  background: #1b111f;
+  box-shadow: inset 0 1px rgba(255,255,255,.035);
 }
 body.api-page .api-panel-heading .section-kicker { color: #cf9dc9; }
 body.api-page .api-panel-heading h3 { color: #fff0fa; }
-body.api-page .api-panel-index {
-  border-color: rgba(255, 152, 216, .2);
-  background: rgba(211, 61, 161, .12);
-  color: #ffb4e2;
-}
 body.api-page .api-page-intro,
 body.api-page .api-page-nav,
 body.api-page .api-panel { scroll-margin-top: 22px; }
@@ -290,13 +283,19 @@ body.api-page .api-panel { scroll-margin-top: 22px; }
   .kahoot-attachment:hover,
   .stats-teaser:hover,
   body.api-page .api-panel:hover {
-    transform: perspective(1100px) translateY(-2px) rotateX(.45deg);
+    transform: perspective(1100px) translateY(-3px) rotateX(.8deg);
     border-color: rgba(255, 157, 218, .28);
-    box-shadow: 0 16px 34px rgba(4, 1, 9, .26), inset 0 1px rgba(255,255,255,.07);
+    box-shadow: 0 12px 25px rgba(4, 1, 9, .22), inset 0 1px rgba(255,255,255,.055);
   }
 }
 
 @supports (animation-timeline: view(block)) {
+  body.api-page .api-page-intro > div,
+  body.api-page .api-page-nav {
+    animation: api-intro-depth linear both;
+    animation-timeline: view(block);
+    animation-range: entry 0% entry 62%;
+  }
   body:not(.dashboard-embedded):not(.api-page) .popup-scroll > main > .kahoot-attachment,
   body:not(.dashboard-embedded):not(.api-page) .popup-scroll > main > .live-card,
   body:not(.dashboard-embedded):not(.api-page) .popup-scroll > main > .stats-teaser,
@@ -308,14 +307,18 @@ body.api-page .api-panel { scroll-margin-top: 22px; }
   body.api-page .api-panel {
     animation: api-panel-depth linear both;
     animation-timeline: view(block);
-    animation-range: entry 0% entry 48%;
+    animation-range: entry 0% entry 56%;
   }
   @keyframes popup-card-depth {
     from { opacity: .56; translate: 0 22px -28px; rotate: x 3deg; }
     to { opacity: 1; translate: 0 0 0; rotate: x 0deg; }
   }
   @keyframes api-panel-depth {
-    from { opacity: .45; translate: 0 42px -75px; rotate: x 4deg; }
+    from { opacity: .4; translate: 0 54px -100px; rotate: x 6deg; scale: .98; }
+    to { opacity: 1; translate: 0 0 0; rotate: x 0deg; }
+  }
+  @keyframes api-intro-depth {
+    from { opacity: .45; translate: 0 34px -70px; rotate: x 4deg; }
     to { opacity: 1; translate: 0 0 0; rotate: x 0deg; }
   }
 }
@@ -326,4 +329,12 @@ body.api-page .api-panel { scroll-margin-top: 22px; }
   .kahoot-attachment,
   .stats-teaser,
   body.api-page .api-panel { transform: none !important; }
+  body.api-page .api-panel,
+  body.api-page .api-page-intro > div,
+  body.api-page .api-page-nav {
+    animation: none !important;
+    translate: none !important;
+    rotate: none !important;
+    scale: 1 !important;
+  }
 }

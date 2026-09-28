@@ -40,6 +40,18 @@ body.api-page.popup-container {
   background: transparent;
 }
 
+body.api-page::before {
+  position: fixed;
+  z-index: 50;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, #bf70e8, #ff7bca 60%, #ffd0ec);
+  content: "";
+  pointer-events: none;
+  transform: scaleX(var(--api-scroll-progress, 0));
+  transform-origin: left center;
+}
+
 body.api-page .popup-scroll {
   width: min(1120px, 100%);
   max-height: none;
@@ -62,11 +74,16 @@ body.api-page .api-pill { padding: 7px 11px; font-size: 11px; }
 body.api-page .dashboard-launch-row { display: none; }
 
 body.api-page .api-page-intro {
+  position: relative;
   display: flex;
   align-items: end;
   justify-content: space-between;
   gap: 28px;
   margin: 0 0 18px;
+  padding: 12px 0 20px;
+  border-bottom: 1px solid rgba(255, 157, 218, .14);
+  perspective: 1200px;
+  transform-style: preserve-3d;
 }
 
 body.api-page .api-page-intro h2 {
@@ -93,8 +110,8 @@ body.api-page .api-page-nav {
   max-width: 590px;
   padding: 6px;
   border: 1px solid rgba(255,255,255,.08);
-  border-radius: 13px;
-  background: rgba(255,255,255,.035);
+  border-radius: 10px;
+  background: rgba(35, 19, 41, .52);
 }
 
 body.api-page .api-page-nav a {
@@ -149,23 +166,16 @@ body.api-page #aiSection {
 
 body.api-page .api-panel {
   position: relative;
+  perspective: 1400px;
+  transform-style: preserve-3d;
   margin: 13px 0;
   padding: clamp(16px, 2.7vw, 24px);
   overflow: hidden;
   border: 1px solid rgba(255,255,255,.085);
   border-radius: 17px;
-  background: linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.018));
-  box-shadow: 0 14px 42px rgba(0,0,0,.17), inset 0 1px rgba(255,255,255,.025);
+  background: #1b111f;
+  box-shadow: inset 0 1px rgba(255,255,255,.035);
   scroll-margin-top: 18px;
-}
-
-body.api-page .api-panel::before {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 2px;
-  background: linear-gradient(180deg, rgba(240,171,252,.75), rgba(192,38,211,.08));
-  content: "";
-  opacity: .55;
 }
 
 body.api-page .api-panel-heading {
@@ -182,20 +192,6 @@ body.api-page .api-panel-heading h3 {
   color: #eee5f1;
   font-size: 16px;
   letter-spacing: -.3px;
-}
-
-body.api-page .api-panel-index {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid rgba(240,171,252,.17);
-  border-radius: 9px;
-  background: rgba(192,38,211,.08);
-  color: #e6b6eb;
-  font-size: 9px;
-  font-weight: 800;
 }
 
 body.api-page .api-panel .field-label { margin-top: 10px; }
@@ -243,6 +239,17 @@ body.api-page #saveApi { min-width: 185px; min-height: 42px; font-size: 12px; }
 body.api-page #keyStorageNote { max-width: 950px; margin-top: 14px; }
 body.api-page .footer { display: none; }
 
+@supports (animation-timeline: scroll(root block)) {
+  body.api-page::before {
+    animation: api-scroll-progress linear both;
+    animation-timeline: scroll(root block);
+  }
+  @keyframes api-scroll-progress {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+}
+
 @media (max-width: 760px) {
   body.api-page .popup-scroll { padding: 18px 14px 36px; }
   body.api-page .header { margin-bottom: 18px; }
@@ -257,6 +264,7 @@ body.api-page .footer { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  body.api-page::before { display: none; }
   body.api-page .api-page-nav a { transition: none; }
   body.api-page .api-page-nav a:hover { transform: none; }
 }

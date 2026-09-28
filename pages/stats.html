@@ -23,12 +23,12 @@
 
     <main>
       <section class="intro">
-        <span class="eyebrow"><i></i> YOUR ACTIVITY</span>
-        <h1>Your quiz history,<br>in a clearer view.</h1>
-        <p>Local totals for AI answers generated in this browser. Kahoot may still reject a click or mark an answer incorrect.</p>
+        <span class="eyebrow"><i></i> LOCAL HISTORY</span>
+        <h1>Answer activity</h1>
+        <p>Counts and response times for AI answers recorded in this browser. These metrics track AI responses, not Kahoot scores.</p>
       </section>
 
-      <section class="metric-grid" aria-label="Solve metrics" aria-busy="true">
+      <section class="metric-grid" aria-label="Answer activity metrics" aria-busy="true">
         <article class="metric-card metric-primary">
           <span class="metric-label">AI answers generated</span>
           <strong id="totalSolved">Loading…</strong>
@@ -48,10 +48,10 @@
 
       <section class="recent-card" aria-labelledby="recentTitle" aria-busy="true">
         <div class="recent-heading">
-          <div><span class="eyebrow">HISTORY</span><h2 id="recentTitle">Recent AI answers</h2></div>
+          <div><span class="eyebrow">LOCAL HISTORY</span><h2 id="recentTitle">Recent answer requests</h2></div>
           <span id="recentCount" class="recent-count">Loading…</span>
         </div>
-        <p class="timing-note">Response time measures the AI answer request, including any provider fallback. It excludes page loading and answer delay.</p>
+        <p class="timing-note">Response time covers the AI request and provider fallbacks. It excludes page loading and configured answer delay.</p>
         <div id="recentList" class="recent-list" aria-live="polite"></div>
         <div id="emptyState" class="empty-state hidden">No AI answers yet. Generated answers will appear here.</div>
       </section>

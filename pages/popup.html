@@ -35,9 +35,9 @@
 
     <section id="apiPageIntro" class="api-page-intro hidden" aria-labelledby="apiPageTitle">
       <div>
-        <span class="section-kicker">Provider workspace</span>
-        <h2 id="apiPageTitle">API control room</h2>
-        <p>Manage provider keys, model speed, and fallback behavior in one place.</p>
+        <span class="section-kicker">PROVIDER SETUP</span>
+        <h2 id="apiPageTitle">AI provider settings</h2>
+        <p>Choose an AI service, manage saved keys, and configure answer models and fallbacks.</p>
       </div>
       <nav class="api-page-nav" aria-label="API settings sections">
         <a href="#providerPanel">Provider</a>
@@ -130,7 +130,7 @@
       </button>
       <div id="aiSection" class="openai-section hidden">
         <section id="providerPanel" class="api-panel" aria-labelledby="providerPanelTitle">
-          <div class="api-panel-heading"><div><span class="section-kicker">Routing</span><h3 id="providerPanelTitle">Provider and fallback</h3></div><span class="api-panel-index">01</span></div>
+          <div class="api-panel-heading"><div><span class="section-kicker">ROUTING</span><h3 id="providerPanelTitle">Provider and fallback</h3></div></div>
           <label class="field-label" for="aiProvider">Preferred provider</label>
           <select id="aiProvider" class="field-select" aria-label="AI provider">
             <option value="openai">OpenAI</option>
@@ -141,7 +141,7 @@
           <div class="openai-note">On rate limits, outages, or key errors, quiz text or images may go to another provider with a saved key. Its usage limits and billing apply.</div>
         </section>
         <section id="apiKeysPanel" class="api-panel" aria-labelledby="apiKeysPanelTitle">
-          <div class="api-panel-heading"><div><span class="section-kicker">Credentials</span><h3 id="apiKeysPanelTitle">API key manager</h3></div><span class="api-panel-index">02</span></div>
+          <div class="api-panel-heading"><div><span class="section-kicker">CREDENTIALS</span><h3 id="apiKeysPanelTitle">API key manager</h3></div></div>
           <div class="api-key-manager" aria-labelledby="apiKeyManagerTitle">
             <div class="api-key-manager-heading">
               <div><span class="field-label" id="apiKeyManagerTitle">Saved keys</span><p class="setting-note">The first enabled key is tried first. Test access, rename, reorder, pause, replace, or remove each key here.</p></div>
@@ -164,7 +164,7 @@
           </div>
         </section>
         <section id="modelSettingsPanel" class="api-panel" aria-labelledby="modelSettingsTitle">
-          <div class="api-panel-heading"><div><span class="section-kicker">Answer quality</span><h3 id="modelSettingsTitle">Models and reasoning</h3></div><span class="api-panel-index">03</span></div>
+          <div class="api-panel-heading"><div><span class="section-kicker">ANSWER MODEL</span><h3 id="modelSettingsTitle">Models and reasoning</h3></div></div>
           <div class="model-selection-summary" role="status" aria-live="polite">
             <div class="model-selection-summary-heading"><strong>Current model setup</strong><span id="modelSelectionState" class="model-selection-state">Loading saved setup…</span></div>
             <div class="model-selection-summary-grid">
@@ -210,7 +210,7 @@
         </div>
         </section>
         <section id="fastBinaryPanel" class="api-panel" aria-labelledby="fastBinaryTitle">
-          <div class="api-panel-heading"><div><span class="section-kicker">Latency</span><h3 id="fastBinaryTitle">Fast lane for True/False</h3></div><span class="api-panel-index">04</span></div>
+          <div class="api-panel-heading"><div><span class="section-kicker">RESPONSE SPEED</span><h3 id="fastBinaryTitle">Fast lane for True/False</h3></div></div>
         <div class="reasoning-row fast-binary-row">
           <div class="toggle-row"><label for="fastBinaryAnswers">Use a separate fast model</label><label class="toggle"><input type="checkbox" id="fastBinaryAnswers"><span class="toggle-track"></span></label></div>
           <p class="setting-note">Runs only for exactly two choices, True and False, with no question image. A reply that is not exactly TRUE or FALSE, or a failed request, retries with your primary model.</p>
@@ -220,7 +220,7 @@
         </div>
         </section>
         <section id="backupModelsPanel" class="api-panel" aria-labelledby="backupModelsTitle">
-          <div class="api-panel-heading"><div><span class="section-kicker">Resilience</span><h3 id="backupModelsTitle">Fallback models</h3></div><span class="api-panel-index">05</span></div>
+          <div class="api-panel-heading"><div><span class="section-kicker">RECOVERY</span><h3 id="backupModelsTitle">Fallback models</h3></div></div>
         <div class="model-backups">
           <div class="backup-heading">
             <div><label class="field-label" for="backupModel1">Quota and outage backups</label><p class="setting-note">Choose up to five models in the order they should be tried after a rate limit or model error.</p></div>
@@ -236,7 +236,7 @@
         </div>
         </section>
         <section id="modelCatalogPanel" class="api-panel" aria-labelledby="modelCatalogTitle">
-          <div class="api-panel-heading"><div><span class="section-kicker">Discovery</span><h3 id="modelCatalogTitle">Model catalog</h3></div><span class="api-panel-index">06</span></div>
+          <div class="api-panel-heading"><div><span class="section-kicker">MODEL LIST</span><h3 id="modelCatalogTitle">Model catalog</h3></div></div>
         <div class="model-catalog">
           <div class="catalog-toolbar">
             <div><label class="field-label" for="modelSearch">Find a model</label><p id="catalogHelp" class="setting-note">Gemini and OpenAI run three short streams and report median TPS plus first-token time. OpenRouter uses provider-reported free-endpoint metadata; charges or quota may apply to generation checks.</p></div>
@@ -258,7 +258,7 @@
         </div>
         </section>
         <section id="saveSettingsPanel" class="api-panel api-save-panel" aria-labelledby="saveSettingsTitle">
-          <div class="api-panel-heading"><div><span class="section-kicker">Apply</span><h3 id="saveSettingsTitle">Save provider setup</h3></div><span class="api-panel-index">07</span></div>
+          <div class="api-panel-heading"><div><span class="section-kicker">SAVE CHANGES</span><h3 id="saveSettingsTitle">Save provider setup</h3></div></div>
         <div id="providerQuota" class="provider-quota" role="status" aria-live="polite"></div>
         <div class="openai-actions">
           <button id="saveApi" class="btn-save" type="button">Save</button>

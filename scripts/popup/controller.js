@@ -94,9 +94,9 @@ const isDashboardFrame = new URLSearchParams(location.search).get('dashboard') =
 if (isApiPage) {
   document.documentElement.classList.add('api-page-html');
   document.body.classList.add('api-page');
-  document.title = 'UwU Kahoot AI · API control room';
+  document.title = 'UwU Kahoot AI · Provider settings';
   apiPageIntro?.classList.remove('hidden');
-  if (versionLabel) versionLabel.textContent = 'API control room';
+  if (versionLabel) versionLabel.textContent = 'Provider settings';
 }
 
 if (isDashboardFrame) {
@@ -409,7 +409,7 @@ function wireSettings() {
 (async function init() {
   if (versionLabel) versionLabel.textContent = `v${chrome.runtime.getManifest().version}`;
   if (isApiPage) {
-    if (versionLabel) versionLabel.textContent = 'API control room';
+    if (versionLabel) versionLabel.textContent = 'Provider settings';
   } else {
     initializePopupStats();
     await initializeLiveSession();
