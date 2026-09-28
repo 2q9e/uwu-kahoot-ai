@@ -7,6 +7,7 @@ import {
 import { createApiKeyManager } from './api-key-manager-ui.js';
 import { createModelCatalogUi } from './model-catalog-ui.js';
 import { getApiStatusPresentation } from './api-status-presentation.js';
+import { wirePreferenceControls } from './preference-controls.js';
 import { DEFAULT_AI_PROVIDER, DEPRECATED_MODELS } from '../core/constants.js';
 import { getOpenRouterDefaultMigration, PROVIDER_SETTINGS } from '../ai/provider-config.js';
 
@@ -201,25 +202,25 @@ export function createPopupSettingsController() {
   }
 
   function wireSettings() {
-    const persistCheckbox = (input, key) => input?.addEventListener('change', async () => {
-      const nextValue = input.checked;
-      if (!await persistSync({ [key]: nextValue })) input.checked = !nextValue;
-    });
-    persistCheckbox(highlightCb, 'highlightOption');
-    persistCheckbox(autoclickCb, 'autoClickOption');
-    persistCheckbox(pinHighlightCb, 'pinHighlightOption');
-    persistCheckbox(pinAutoclickCb, 'pinAutoClickOption');
-    persistCheckbox(silentCb, 'silentMode');
-    fallbackCb?.addEventListener('change', async () => {
-      const nextValue = fallbackCb.checked;
-      if (!await persistSync({ aiFallbackEnabled: nextValue })) {
-        fallbackCb.checked = currentSettings.aiFallbackEnabled !== false;
-        setProviderSaveStatus('Fallback preference was not saved.', 'error');
-        return;
+    wirePreferenceControls({
+      checkboxPreferences: [
+        [highlightCb, 'highlightOption'],
+        [autoclickCb, 'autoClickOption'],
+        [pinHighlightCb, 'pinHighlightOption'],
+        [pinAutoclickCb, 'pinAutoClickOption'],
+        [silentCb, 'silentMode']
+      ],
+      fallbackCheckbox: fallbackCb,
+      delaySlider,
+      persistSync,
+      updateDelayLabel,
+      getSavedFallbackValue: () => currentSettings.aiFallbackEnabled,
+      onFallbackSaveFailed: () => setProviderSaveStatus('Fallback preference was not saved.', 'error'),
+      onFallbackSaved: nextValue => {
+        currentSettings.aiFallbackEnabled = nextValue;
+        updateApiStatus();
+        setProviderSaveStatus('Fallback preference saved immediately.', 'success');
       }
-      currentSettings.aiFallbackEnabled = nextValue;
-      updateApiStatus();
-      setProviderSaveStatus('Fallback preference saved immediately.', 'success');
     });
 
     retrySettingsLoadBtn?.addEventListener('click', async () => {
@@ -243,14 +244,6 @@ export function createPopupSettingsController() {
         retrySettingsLoadBtn.disabled = false;
         retrySettingsLoadBtn.textContent = 'Retry settings';
       }
-    });
-
-    let delayDebounce = null;
-    delaySlider?.addEventListener('input', () => {
-      const v = parseFloat(delaySlider.value);
-      updateDelayLabel(v);
-      clearTimeout(delayDebounce);
-      delayDebounce = setTimeout(() => persistSync({ answerDelay: v }), 250);
     });
 
     providerSelect?.addEventListener('change', async () => {
