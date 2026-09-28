@@ -82,6 +82,11 @@ globalThis.UwUKahootAIStatusUi = {
       thinkingDot = null;
     }
 
+    function clearErrorToasts() {
+      for (const toast of activeToasts) toast.remove();
+      activeToasts = [];
+    }
+
     function showErrorToast(message) {
       if (getSilentMode()) return;
       while (activeToasts.length >= 3) {
@@ -110,6 +115,6 @@ globalThis.UwUKahootAIStatusUi = {
       }, 4500);
     }
 
-    return { updateStatus, removeStatusIndicator, showErrorToast };
+    return { updateStatus, removeStatusIndicator, clearErrorToasts, showErrorToast };
   }
 };

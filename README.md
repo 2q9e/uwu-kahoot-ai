@@ -87,7 +87,7 @@ Use the provider's own usage page to check current pricing and limits. A model a
 
 ### Choose how answers appear
 
-The popup's **Extension** switch pauses question detection, AI requests, and answer actions without removing your settings. Turn it back on to resume. The dashboard also lets you control answer highlighting, automatic clicks, pin placement, answer delay, and Silent mode. Silent mode hides extension badges, highlights, and delay countdowns while keeping the configured answer actions active.
+The popup's **Extension** switch pauses question detection, AI requests, and answer actions without removing your settings. Turn it back on to resume. The popup's **Behavior** section controls answer highlighting, automatic clicks, pin placement, answer delay, and quiet page feedback. Quiet page feedback hides the on-page status badge and error notices, answer highlights, pin and jumble markers, and delay countdowns. Popup status and debug details remain available, and configured answer actions continue.
 
 ## Numbers matter? ohhh yes.
 

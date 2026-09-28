@@ -72,7 +72,7 @@ const statusUi = globalThis.UwUKahootAIStatusUi.create({
   },
   broadcastToPopup
 });
-const { updateStatus, removeStatusIndicator, showErrorToast } = statusUi;
+const { updateStatus, removeStatusIndicator, clearErrorToasts, showErrorToast } = statusUi;
 const domWaiter = globalThis.UwUKahootAIDomWait.create({ getNonce: () => contentState.submitNonce });
 const { waitForDomResult, waitForQuestionEvent } = domWaiter;
 const questionDom = globalThis.UwUKahootAIQuestionDom.create({
@@ -164,9 +164,11 @@ chrome.storage.onChanged.addListener((changes, ns) => {
     updateStatus('Extension enabled', 'Waiting for the next quiz question.');
     window.dispatchEvent(new CustomEvent('kahootQuestionRescan'));
   }
-  if (cachedSettings.silentMode) {
+  if (Object.hasOwn(changes, 'silentMode') && cachedSettings.silentMode) {
     removeStatusIndicator();
     document.getElementById('uwukahootai-timer')?.remove();
+    clearErrorToasts();
+    answerFeedbackUi.cleanupOverlays();
   }
 });
 
@@ -179,6 +181,12 @@ initialSettingsPromise = refreshSettings().then(() => {
     clearCurrentQuestion('Extension paused. Detection and answer actions are off.');
     answerFeedbackUi.cleanupOverlays();
     removeStatusIndicator();
+  }
+  if (cachedSettings.silentMode) {
+    removeStatusIndicator();
+    document.getElementById('uwukahootai-timer')?.remove();
+    clearErrorToasts();
+    answerFeedbackUi.cleanupOverlays();
   }
 });
 

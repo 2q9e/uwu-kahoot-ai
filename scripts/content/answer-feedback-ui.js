@@ -3,6 +3,7 @@
 
   function createAnswerFeedbackUi({ domAdapter }) {
   const PIN_SVG_SELECTOR = '[data-functional-selector="pin-input-svg"]';
+  const highlightedSliderMarkers = new Map();
 
   function nodeContains(node, target) {
     return node === target || !!node?.contains?.(target);
@@ -35,6 +36,14 @@
       el.style.borderRadius = '';
       el.style.transition = '';
     }
+    for (const [element, styles] of highlightedSliderMarkers) {
+      if (!element.isConnected) continue;
+      element.style.border = styles.border;
+      element.style.boxShadow = styles.boxShadow;
+      element.style.borderRadius = styles.borderRadius;
+      element.style.transition = styles.transition;
+    }
+    highlightedSliderMarkers.clear();
   }
 
   function showPinCrosshair(svgEl, coords) {
@@ -160,6 +169,14 @@
     if (bestMarker) {
       const dot = bestMarker.querySelector('[class*="Marker-sc"], [data-functional-selector*="marker"]');
       if (dot) {
+        if (!highlightedSliderMarkers.has(dot)) {
+          highlightedSliderMarkers.set(dot, {
+            border: dot.style.border,
+            boxShadow: dot.style.boxShadow,
+            borderRadius: dot.style.borderRadius,
+            transition: dot.style.transition
+          });
+        }
         dot.style.border = '3px solid #00ff00';
         dot.style.boxShadow = '0 0 12px #00ff00';
         dot.style.borderRadius = '50%';
