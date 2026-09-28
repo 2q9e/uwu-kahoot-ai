@@ -27,6 +27,123 @@
       getInitialSettingsPromise
     } = dependencies;
 
+    async function waitForQuestionIntro(preparationNonce, incomingHash) {
+      state.loadingEndsAt = 0;
+      const readLoadingDuration = () => {
+        const loadBar = document.querySelector('[data-functional-selector="loading-bar-progress"]');
+        if (!loadBar) return false;
+        const computedStyle = getComputedStyle(loadBar);
+        const duration = parseFloat(computedStyle.getPropertyValue('--animation-duration')) || 0;
+        const delay = parseFloat(computedStyle.getPropertyValue('--animation-delay')) || 0;
+        if (duration + delay <= 0) return false;
+        const introBuffer = 1500;
+        state.loadingEndsAt = Date.now() + duration + delay + introBuffer;
+        log(`Loading bar found: ${duration}+${delay}+${introBuffer}ms buffer = ${duration + delay + introBuffer}ms total`);
+        return true;
+      };
+
+      for (let attempt = 0; attempt < 10; attempt++) {
+        if (preparationNonce !== state.submitNonce || state.lastPreparedHash !== incomingHash) {
+          log('Discarding loading timing from an outdated question.');
+          return false;
+        }
+        if (readLoadingDuration()) break;
+        if (attempt < 9) await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      return true;
+    }
+
+    async function waitForCompleteAnswerChoices(q, {
+      incomingHash,
+      expectedChoiceCount,
+      dataChoiceCount,
+      previousQuestionChoices,
+      questionTransition
+    }) {
+      const requiredChoices = Math.max(2, expectedChoiceCount);
+      updateStatus('Waiting for on-screen answers…', dataChoiceCount
+        ? `Kahoot data includes ${dataChoiceCount} choice${dataChoiceCount === 1 ? '' : 's'}. Checking the page for the complete set before sending anything to AI.`
+        : 'No answer choices have arrived yet. Checking the page before sending anything to AI.');
+      const choiceWaitNonce = state.submitNonce;
+      state.currentQuestionReadiness = {
+        choicesRequired: true,
+        dataChoiceCount,
+        expectedChoiceCount: requiredChoices,
+        visibleChoiceCount: 0,
+        choicesReady: false
+      };
+      broadcastToPopup('updateQuestion', {
+        question: { title: q.title, type: q.type, choices: q.choices || [] },
+        state: 'waiting_for_choices',
+        readiness: state.currentQuestionReadiness
+      });
+
+      const domChoices = await pollForAnswerChoices(expectedChoiceCount, choiceWaitNonce, q.choices, previousQuestionChoices, questionTransition);
+      if (choiceWaitNonce !== state.submitNonce || state.lastPreparedHash !== incomingHash) {
+        log('Discarding answer choices from an outdated question.');
+        return false;
+      }
+      if (domChoices.length < 2) {
+        state.lastPreparedHash = null;
+        state.currentSolveId = null;
+        state.currentQuestion.choices = q.choices || [];
+        state.questionState = 'waiting_for_choices';
+        state.currentQuestionReadiness = {
+          choicesRequired: true,
+          dataChoiceCount,
+          expectedChoiceCount: requiredChoices,
+          visibleChoiceCount: domChoices.length,
+          choicesReady: false
+        };
+        recordDiagnostic('QUESTION_CHOICES_INCOMPLETE', {
+          stage: 'detection',
+          dataChoiceCount,
+          visibleChoiceCount: domChoices.length,
+          expectedChoiceCount: requiredChoices
+        });
+        broadcastToPopup('updateQuestion', {
+          question: { title: q.title, type: q.type, choices: state.currentQuestion.choices },
+          state: 'waiting_for_choices',
+          readiness: state.currentQuestionReadiness
+        });
+        updateStatus('Waiting for answer choices', `Kahoot data had ${dataChoiceCount} choice${dataChoiceCount === 1 ? '' : 's'}; the page currently shows ${domChoices.length}. At least ${requiredChoices} readable choices are needed. No AI request was sent.`);
+        return false;
+      }
+
+      q.choices = domChoices;
+      log(`Visible answer choices confirmed: ${domChoices.length}`);
+      state.currentQuestion.choices = q.choices;
+      state.currentQuestionReadiness = {
+        choicesRequired: true,
+        dataChoiceCount,
+        expectedChoiceCount: requiredChoices,
+        visibleChoiceCount: q.choices.length,
+        choicesReady: true
+      };
+      broadcastToPopup('updateQuestion', {
+        question: { title: q.title, type: q.type, choices: q.choices },
+        state: 'processing',
+        readiness: state.currentQuestionReadiness
+      });
+      updateStatus('Answer choices ready', `${q.choices.length} choices are ready. Sending the question and choices to the selected provider.`);
+      return true;
+    }
+
+    async function resolveImageChoiceLabels(q, preparationNonce, incomingHash) {
+      const labels = await pollForImageLabels(q.choices.length, state.submitNonce, q.choices);
+      if (preparationNonce !== state.submitNonce || state.lastPreparedHash !== incomingHash) {
+        log('Discarding image labels from an outdated question.');
+        return false;
+      }
+      if (labels.length === q.choices.length && labels.some(label => label && !/^Image \d+$/i.test(label))) {
+        q.choices = labels;
+        log(`Image choices resolved: ${labels.length}`);
+      } else {
+        log('Image labels unavailable; retaining numbered choices.');
+      }
+      return true;
+    }
+
     window.addEventListener('kahootQuestionParsed', async (event) => {
       const q = event.detail;
       if (!q?.title) return;
@@ -89,169 +206,82 @@
         question: { title: q.title, type: q.type, choices: q.choices || [] },
         state: state.questionState,
         readiness: state.currentQuestionReadiness
-    });
-    updateStatus('Preparing question…');
-    const settingsPromise = isInitialSettingsLoaded() ? null : getInitialSettingsPromise();
-
-    state.loadingEndsAt = 0;
-    const readLoadingDuration = () => {
-      const loadBar = document.querySelector('[data-functional-selector="loading-bar-progress"]');
-      if (!loadBar) return false;
-      const cs = getComputedStyle(loadBar);
-      const dur = parseFloat(cs.getPropertyValue('--animation-duration')) || 0;
-      const del = parseFloat(cs.getPropertyValue('--animation-delay')) || 0;
-      if (dur + del <= 0) return false;
-      const introBuffer = 1500;
-      state.loadingEndsAt = Date.now() + dur + del + introBuffer;
-      log(`Loading bar found: ${dur}+${del}+${introBuffer}ms buffer = ${dur + del + introBuffer}ms total`);
-      return true;
-    };
-    for (let attempt = 0; attempt < 10; attempt++) {
-      if (preparationNonce !== state.submitNonce || state.lastPreparedHash !== incomingHash) {
-        log('Discarding loading timing from an outdated question.');
-        return;
-      }
-      if (readLoadingDuration()) break;
-      if (attempt < 9) await new Promise(resolve => setTimeout(resolve, 50));
-    }
-
-    answerFeedbackUi.cleanupOverlays();
-
-    if (isChoiceQuestion) {
-      const requiredChoices = Math.max(2, expectedChoiceCount);
-      updateStatus('Waiting for on-screen answers…', dataChoiceCount
-        ? `Kahoot data includes ${dataChoiceCount} choice${dataChoiceCount === 1 ? '' : 's'}. Checking the page for the complete set before sending anything to AI.`
-        : 'No answer choices have arrived yet. Checking the page before sending anything to AI.');
-      const choiceWaitNonce = state.submitNonce;
-      const expectedChoices = expectedChoiceCount;
-      state.currentQuestionReadiness = {
-        choicesRequired: true,
-        dataChoiceCount,
-        expectedChoiceCount: requiredChoices,
-        visibleChoiceCount: 0,
-        choicesReady: false
-      };
-      broadcastToPopup('updateQuestion', {
-        question: { title: q.title, type: q.type, choices: q.choices || [] },
-        state: 'waiting_for_choices',
-        readiness: state.currentQuestionReadiness
       });
-      const domChoices = await pollForAnswerChoices(expectedChoices, choiceWaitNonce, q.choices, previousQuestionChoices, questionTransition);
-      if (choiceWaitNonce !== state.submitNonce || state.lastPreparedHash !== incomingHash) {
-        log('Discarding answer choices from an outdated question.');
-        return;
-      }
-      if (domChoices.length >= 2) {
-        q.choices = domChoices;
-        log(`Visible answer choices confirmed: ${domChoices.length}`);
-      } else {
-        state.lastPreparedHash = null;
-        state.currentSolveId = null;
-        state.currentQuestion.choices = q.choices || [];
-        state.questionState = 'waiting_for_choices';
-        state.currentQuestionReadiness = {
-          choicesRequired: true,
+      updateStatus('Preparing question…');
+      const settingsPromise = isInitialSettingsLoaded() ? null : getInitialSettingsPromise();
+
+      if (!await waitForQuestionIntro(preparationNonce, incomingHash)) return;
+
+      answerFeedbackUi.cleanupOverlays();
+
+      if (isChoiceQuestion) {
+        const choicesReady = await waitForCompleteAnswerChoices(q, {
+          incomingHash,
+          expectedChoiceCount,
           dataChoiceCount,
-          expectedChoiceCount: requiredChoices,
-          visibleChoiceCount: domChoices.length,
-          choicesReady: false
+          previousQuestionChoices,
+          questionTransition
+        });
+        if (!choicesReady) return;
+      }
+
+      if (isJumble) {
+        const domTiles = await pollForJumbleTiles();
+        if (domTiles.length > 0) {
+          q.choices = domTiles;
+          log(`Jumble tiles read from page: ${domTiles.length}`);
+        } else if (!q.choices?.length) {
+          warn('No jumble tiles found');
+          return;
+        }
+      }
+
+      if (isSlider) {
+        const domSliderConfig = await probeSliderConfigFast();
+        q.sliderConfig = {
+          min: q.sliderConfig?.min ?? domSliderConfig?.min ?? null,
+          max: q.sliderConfig?.max ?? domSliderConfig?.max ?? null,
+          step: q.sliderConfig?.step ?? domSliderConfig?.step ?? null,
+          unit: q.sliderConfig?.unit || domSliderConfig?.unit || ''
         };
-        recordDiagnostic('QUESTION_CHOICES_INCOMPLETE', {
-          stage: 'detection',
-          dataChoiceCount,
-          visibleChoiceCount: domChoices.length,
-          expectedChoiceCount: requiredChoices
-        });
-        broadcastToPopup('updateQuestion', {
-          question: { title: q.title, type: q.type, choices: state.currentQuestion.choices },
-          state: 'waiting_for_choices',
-          readiness: state.currentQuestionReadiness
-        });
-        updateStatus('Waiting for answer choices', `Kahoot data had ${dataChoiceCount} choice${dataChoiceCount === 1 ? '' : 's'}; the page currently shows ${domChoices.length}. At least ${requiredChoices} readable choices are needed. No AI request was sent.`);
+        log('Slider config merged:', q.sliderConfig);
+      }
+
+      state.questionState = 'processing';
+
+      if (settingsPromise) await settingsPromise;
+
+      if (!isPin && !isJumble && !isSlider && !isOpenEnded && q.choices.some(c => !c || /^Image \d+$/.test(c))) {
+        const labelsResolved = await resolveImageChoiceLabels(q, preparationNonce, incomingHash);
+        if (!labelsResolved) return;
+      }
+
+      const postPollHash = questionHash(q);
+      if (state.lastPreparedHash !== incomingHash) {
+        log('Dedup: discarding outdated question preparation');
         return;
       }
-      state.currentQuestion.choices = q.choices;
-      state.currentQuestionReadiness = {
-        choicesRequired: true,
-        dataChoiceCount,
-        expectedChoiceCount: requiredChoices,
-        visibleChoiceCount: q.choices.length,
-        choicesReady: true
+      if (state.lastSentHash === postPollHash) {
+        log('Dedup: post-poll duplicate, skipping');
+        return;
+      }
+
+      state.currentQuestion = {
+        title: q.title,
+        choices: q.choices || [],
+        type: q.type,
+        questionIndex: q.questionIndex,
+        imageUrl: q.imageUrl,
+        ...(q.sliderConfig ? { sliderConfig: q.sliderConfig } : {})
       };
-      broadcastToPopup('updateQuestion', {
-        question: { title: q.title, type: q.type, choices: q.choices },
-        state: 'processing',
-        readiness: state.currentQuestionReadiness
-      });
-      updateStatus('Answer choices ready', `${q.choices.length} choices are ready. Sending the question and choices to the selected provider.`);
-    }
+      state.questionState = 'processing';
+      state.questionError = null;
+      advanceSubmitNonce();
+      state.currentAnswer = null;
+      state.hasRetried = false;
+      state.pendingRetryHash = null;
 
-    if (isJumble) {
-      const domTiles = await pollForJumbleTiles();
-      if (domTiles.length > 0) {
-        q.choices = domTiles;
-        log(`Jumble tiles read from page: ${domTiles.length}`);
-      } else if (!q.choices?.length) {
-        warn('No jumble tiles found');
-        return;
-      }
-    }
-
-    if (isSlider) {
-      const domSliderConfig = await probeSliderConfigFast();
-      q.sliderConfig = {
-        min: q.sliderConfig?.min ?? domSliderConfig?.min ?? null,
-        max: q.sliderConfig?.max ?? domSliderConfig?.max ?? null,
-        step: q.sliderConfig?.step ?? domSliderConfig?.step ?? null,
-        unit: q.sliderConfig?.unit || domSliderConfig?.unit || ''
-      };
-      log('Slider config merged:', q.sliderConfig);
-    }
-
-    state.questionState = 'processing';
-
-    if (settingsPromise) await settingsPromise;
-
-    if (!isPin && !isJumble && !isSlider && !isOpenEnded && q.choices.some(c => !c || /^Image \d+$/.test(c))) {
-      const labels = await pollForImageLabels(q.choices.length, state.submitNonce, q.choices);
-      if (preparationNonce !== state.submitNonce || state.lastPreparedHash !== incomingHash) {
-        log('Discarding image labels from an outdated question.');
-        return;
-      }
-      if (labels.length === q.choices.length && labels.some(l => l && !/^Image \d+$/i.test(l))) {
-        q.choices = labels;
-      log(`Image choices resolved: ${labels.length}`);
-      } else {
-        log('Image labels unavailable; retaining numbered choices.');
-      }
-    }
-
-    const postPollHash = questionHash(q);
-    if (state.lastPreparedHash !== incomingHash) {
-      log('Dedup: discarding outdated question preparation');
-      return;
-    }
-    if (state.lastSentHash === postPollHash) {
-      log('Dedup: post-poll duplicate, skipping');
-      return;
-    }
-
-    state.currentQuestion = {
-      title: q.title,
-      choices: q.choices || [],
-      type: q.type,
-      questionIndex: q.questionIndex,
-      imageUrl: q.imageUrl,
-      ...(q.sliderConfig ? { sliderConfig: q.sliderConfig } : {})
-    };
-    state.questionState = 'processing';
-    state.questionError = null;
-    advanceSubmitNonce();
-    state.currentAnswer = null;
-    state.hasRetried = false;
-    state.pendingRetryHash = null;
-
-    sendQuestionToBackend(q);
+      sendQuestionToBackend(q);
     });
   }
 
