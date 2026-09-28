@@ -8,7 +8,7 @@
       return type === 'true_false' ? 2 : 0;
     }
 
-    async function pollForAnswerChoices(expectedCount = 0, nonce = getNonce(), fallbackChoices = [], previousChoices = []) {
+    async function pollForAnswerChoices(expectedCount = 0, nonce = getNonce(), fallbackChoices = [], previousChoices = [], questionTransition = false) {
       const requiredCount = Math.max(2, Number(expectedCount) || 0);
       const fallbacks = Array.isArray(fallbackChoices)
         ? fallbackChoices.map(choice => String(choice ?? '').trim())
@@ -18,6 +18,7 @@
         : [];
       const fallbackIsComplete = fallbacks.length >= requiredCount && fallbacks.every(Boolean);
       const isPreviousQuestionChoices = choices => {
+        if (questionTransition) return false;
         const normalized = choices.map(choice => String(choice ?? '').trim().toLocaleLowerCase());
         return previous.length > 1 && previous.length === normalized.length &&
           previous.every((choice, index) => choice === normalized[index]);

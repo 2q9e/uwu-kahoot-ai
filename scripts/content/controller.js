@@ -496,7 +496,13 @@ window.addEventListener('kahootQuestionParsed', async (event) => {
     return;
   }
   lastPreparedHash = incomingHash;
-  const previousQuestionChoices = Array.isArray(currentQuestion?.choices) ? [...currentQuestion.choices] : [];
+  const previousQuestion = currentQuestion;
+  const previousQuestionChoices = Array.isArray(previousQuestion?.choices) ? [...previousQuestion.choices] : [];
+  const questionTransition = !!previousQuestion && (
+    q.title !== previousQuestion.title ||
+    q.type !== previousQuestion.type ||
+    String(q.questionIndex ?? '') !== String(previousQuestion.questionIndex ?? '')
+  );
   currentSolveId = createSolveId();
   cancelActiveRequest();
   lastSentHash = null;
@@ -574,7 +580,7 @@ window.addEventListener('kahootQuestionParsed', async (event) => {
       state: 'waiting_for_choices',
       readiness: currentQuestionReadiness
     });
-    const domChoices = await pollForAnswerChoices(expectedChoices, choiceWaitNonce, q.choices, previousQuestionChoices);
+    const domChoices = await pollForAnswerChoices(expectedChoices, choiceWaitNonce, q.choices, previousQuestionChoices, questionTransition);
     if (choiceWaitNonce !== submitNonce || lastPreparedHash !== incomingHash) {
       log('Discarding answer choices from an outdated question.');
       return;
