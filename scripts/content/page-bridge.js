@@ -24,12 +24,12 @@
   const isCurrentQuestion = questionIndex => questionIndex == null ||
     String(questionIndex) === String(window.kahootQuestionIndex);
 
-  const _decodeEl = document.createElement('textarea');
+  const _decodeTemplate = document.createElement('template');
 
   function decodeEntities(str) {
     if (typeof str !== 'string') return String(str ?? '');
-    _decodeEl.innerHTML = str;
-    return _decodeEl.value.replace(/<[^>]*>/g, '');
+    _decodeTemplate.innerHTML = str;
+    return _decodeTemplate.content.textContent;
   }
 
   function extractChoiceText(value, depth = 0) {
