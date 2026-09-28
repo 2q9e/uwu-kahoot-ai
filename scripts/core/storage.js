@@ -8,6 +8,7 @@ import {
   moveProviderKeyRecord,
   readProviderKeyRecords,
   removeProviderKeyRecord,
+  saveProviderKeyTestResult,
   updateProviderKeyRecord
 } from './api-key-manager.js';
 
@@ -127,6 +128,11 @@ export async function addProviderApiKey(provider, entry) {
 export async function updateProviderApiKey(provider, id, changes) {
   const normalizedProvider = await prepareProviderApiKeys(provider);
   return updateProviderKeyRecord(normalizedProvider, id, changes);
+}
+
+export async function saveProviderApiKeyTestResult(provider, id, testedSecret, lastTest) {
+  const normalizedProvider = await prepareProviderApiKeys(provider);
+  return saveProviderKeyTestResult(normalizedProvider, id, testedSecret, lastTest);
 }
 
 export async function removeProviderApiKey(provider, id) {

@@ -320,10 +320,17 @@ export function createPopupSettingsController() {
       addApiKeyBtn.disabled = true;
       setAiFeedback('Adding key to local extension storage…');
       try {
-        await addProviderApiKey(currentProvider, {
-          label: newApiKeyLabel?.value.trim() || `Key ${(currentSettings.managedApiKeys?.[currentProvider] || []).length + 1}`,
-          secret
-        });
+        try {
+          await addProviderApiKey(currentProvider, {
+            label: newApiKeyLabel?.value.trim() || `Key ${(currentSettings.managedApiKeys?.[currentProvider] || []).length + 1}`,
+            secret
+          });
+        } catch (error) {
+          if (/storage|operation failed|context invalidated/i.test(String(error?.message || ''))) reportStorageFailure('settings');
+          setAiFeedback(error.message || 'Could not add this key.', 'error');
+          return;
+        }
+
         if (newApiKeySecret) newApiKeySecret.value = '';
         if (newApiKeyLabel) newApiKeyLabel.value = '';
         if (newApiKeySecret) newApiKeySecret.type = 'password';
@@ -333,10 +340,13 @@ export function createPopupSettingsController() {
         }
         setAiFeedback('Key added. Test it to check provider access.', 'success');
         setProviderSaveStatus('API key saved immediately.', 'success');
-        await apiKeyManager.render(currentProvider);
-      } catch (error) {
-        if (/storage|operation failed|context invalidated/i.test(String(error?.message || ''))) reportStorageFailure('settings');
-        setAiFeedback(error.message || 'Could not add this key.', 'error');
+        try {
+          await apiKeyManager.render(currentProvider);
+        } catch (error) {
+          if (/storage|operation failed|context invalidated/i.test(String(error?.message || ''))) reportStorageFailure('settings');
+          const detail = error?.message ? ' ' + error.message : '';
+          setAiFeedback('Key added and saved. The key list could not be refreshed. Reopen API settings to reload it.' + detail, 'error');
+        }
       } finally {
         addApiKeyBtn.disabled = false;
       }

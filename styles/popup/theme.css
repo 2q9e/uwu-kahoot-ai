@@ -206,6 +206,9 @@ body.api-page.popup-container {
   background: rgba(207, 65, 162, .13);
   color: #ffc0e6;
 }
+.api-key-management > summary { color: #ffb0e5; }
+.api-key-management > summary:hover { color: #fff0fa; }
+.api-key-management > summary::after { border-color: rgba(255, 143, 213, .22); background: rgba(214, 66, 168, .1); }
 .managed-key-mask,
 .model-card-heading code { color: #dab7e7; }
 .api-key-summary,

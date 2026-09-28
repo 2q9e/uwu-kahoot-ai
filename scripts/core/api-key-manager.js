@@ -203,6 +203,24 @@ export async function updateProviderKeyRecord(provider, id, changes = {}) {
   });
 }
 
+export async function saveProviderKeyTestResult(provider, id, testedSecret, lastTest) {
+  assertProvider(provider);
+  const expectedSecret = typeof testedSecret === 'string' ? testedSecret.trim() : '';
+  if (!expectedSecret) return false;
+
+  return serializeManagerMutation(async manager => {
+    const records = normalizeRecords(manager[provider]);
+    const index = records.findIndex(record => record.id === id);
+    if (index < 0 || records[index].secret !== expectedSecret) return false;
+
+    records[index] = normalizeRecord({ ...records[index], lastTest });
+    await chrome.storage.local.set({
+      [API_KEY_MANAGER_STORAGE_KEY]: { ...manager, [provider]: normalizeRecords(records) }
+    });
+    return true;
+  });
+}
+
 export async function removeProviderKeyRecord(provider, id) {
   assertProvider(provider);
   return mutateProviderRecords(provider, records => {

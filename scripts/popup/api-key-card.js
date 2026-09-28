@@ -82,7 +82,7 @@ export function createProviderKeyCard({
   header.append(labelWrap, state, priorityLabel);
 
   const actions = document.createElement('div');
-  actions.className = 'api-key-actions';
+  actions.className = 'api-key-actions api-key-primary-actions';
   const enableLabel = document.createElement('label');
   enableLabel.className = 'api-key-enabled toggle';
   const enabled = document.createElement('input');
@@ -105,7 +105,7 @@ export function createProviderKeyCard({
   down.disabled = index === totalRecords - 1;
   const replaceButton = managerButton('Replace key');
   const remove = managerButton('Remove', 'catalog-action danger');
-  actions.append(enableLabel, test, up, down, replaceButton, remove);
+  actions.append(enableLabel, test);
 
   const replaceRow = document.createElement('div');
   replaceRow.className = 'key-replace-row hidden';
@@ -121,6 +121,41 @@ export function createProviderKeyCard({
   replacementLabel.append(replacement);
   const replaceSave = managerButton('Update key', 'catalog-action');
   replaceRow.append(replacementLabel, replaceSave);
+
+  const management = document.createElement('details');
+  management.className = 'api-key-management';
+  const managementSummary = document.createElement('summary');
+  managementSummary.textContent = 'Manage key';
+  managementSummary.setAttribute('aria-label', 'Manage key ' + record.label);
+  const managementContent = document.createElement('div');
+  managementContent.className = 'api-key-management-content';
+  const managementActions = document.createElement('div');
+  managementActions.className = 'api-key-actions api-key-management-actions';
+  managementActions.append(up, down, replaceButton, remove);
+  managementContent.append(managementActions, replaceRow);
+  management.append(managementSummary, managementContent);
+
+  const keyMutationControls = [label, enabled, up, down, replaceButton, remove, replacement, replaceSave];
+  let priorMutationControlStates = [];
+  function setKeyMutationControlsDisabled(disabled) {
+    if (disabled) {
+      priorMutationControlStates = keyMutationControls.map(control => [control, control.disabled]);
+      for (const [control] of priorMutationControlStates) control.disabled = true;
+      return;
+    }
+    for (const [control, wasDisabled] of priorMutationControlStates) control.disabled = wasDisabled;
+    priorMutationControlStates = [];
+  }
+
+  async function finishKeyMutation(message) {
+    setAiFeedback(message, 'success');
+    try {
+      await refresh();
+    } catch (error) {
+      const detail = error?.message ? ' ' + error.message : '';
+      setAiFeedback(message + ' The change was saved, but the key list could not be refreshed. Reopen API settings to reload it.' + detail, 'error');
+    }
+  }
 
   label.addEventListener('change', async () => {
     try {
@@ -152,16 +187,27 @@ export function createProviderKeyCard({
   });
 
   test.addEventListener('click', async () => {
+    if (replacement.value.trim()) {
+      setAiFeedback('Finish or clear the replacement key before testing the saved key.', 'error');
+      replacement.focus();
+      return;
+    }
     test.disabled = true;
     test.textContent = 'Testing…';
+    setKeyMutationControlsDisabled(true);
     setAiFeedback('Testing ' + record.label + '. No generation request is sent.');
     try {
-      const { result, persistenceError } = await testProviderApiKeyRecord(provider, record);
+      const { result, persistenceError, stale } = await testProviderApiKeyRecord(provider, record);
+      if (stale) {
+        setAiFeedback(record.label + ' changed or was removed during the test. The result was discarded; test the current key.', 'error');
+        return;
+      }
       if (persistenceError) throw persistenceError;
       setAiFeedback(record.label + ': ' + result.message, result.ok ? 'success' : 'error');
     } catch (error) {
       setAiFeedback(error.message || 'Could not test ' + record.label + '.', 'error');
     } finally {
+      setKeyMutationControlsDisabled(false);
       if (test.isConnected) {
         test.disabled = false;
         test.textContent = 'Test key';
@@ -174,8 +220,7 @@ export function createProviderKeyCard({
     up.disabled = true;
     try {
       await moveProviderApiKey(provider, record.id, 'up');
-      setAiFeedback('Key order updated.', 'success');
-      await refresh();
+      await finishKeyMutation('Key order updated.');
     } catch (error) {
       setAiFeedback(error.message || 'Could not move this key.', 'error');
       up.disabled = false;
@@ -186,8 +231,7 @@ export function createProviderKeyCard({
     down.disabled = true;
     try {
       await moveProviderApiKey(provider, record.id, 'down');
-      setAiFeedback('Key order updated.', 'success');
-      await refresh();
+      await finishKeyMutation('Key order updated.');
     } catch (error) {
       setAiFeedback(error.message || 'Could not move this key.', 'error');
       down.disabled = false;
@@ -203,8 +247,8 @@ export function createProviderKeyCard({
     replaceSave.disabled = true;
     try {
       await updateProviderApiKey(provider, record.id, { secret: replacement.value });
-      setAiFeedback('Key replaced. Test it to verify provider access.', 'success');
-      await refresh();
+      replacement.value = '';
+      await finishKeyMutation('Key replaced. Test it to verify provider access.');
     } catch (error) {
       setAiFeedback(error.message || 'Could not replace this key.', 'error');
     } finally {
@@ -216,8 +260,7 @@ export function createProviderKeyCard({
     remove.disabled = true;
     try {
       await removeProviderApiKey(provider, record.id);
-      setAiFeedback('Key removed from this browser.', 'success');
-      await refresh();
+      await finishKeyMutation('Key removed from this browser.');
     } catch (_) {
       remove.disabled = false;
       setAiFeedback('Could not remove this key. Try again.', 'error');
@@ -236,7 +279,7 @@ export function createProviderKeyCard({
     testStatus.textContent = 'Not tested yet · Test key checks access without sending a generation request.';
   }
 
-  card.append(header, value, actions, replaceRow, testStatus);
+  card.append(header, value, actions, management, testStatus);
   return card;
 }
 

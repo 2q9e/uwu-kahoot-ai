@@ -123,28 +123,55 @@ export function createApiKeyManager({
       setAiFeedback('Enable a saved key before testing provider access.', 'error');
       return;
     }
+    const replacementDraft = [...(apiKeyList?.querySelectorAll('.key-replacement-label input') || [])]
+      .find(input => input.value.trim());
+    if (replacementDraft) {
+      setAiFeedback('Finish or clear the replacement key before testing enabled keys.', 'error');
+      replacementDraft.focus();
+      return;
+    }
 
     testEnabledKeysButton.disabled = true;
     const originalText = testEnabledKeysButton.textContent;
     let passed = 0;
+    let changedDuringTest = 0;
+    const wasInert = apiKeyList?.inert === true;
+    const previousBusyState = apiKeyList?.getAttribute('aria-busy');
+    if (apiKeyList) {
+      apiKeyList.inert = true;
+      apiKeyList.setAttribute('aria-busy', 'true');
+    }
     try {
       for (let index = 0; index < records.length; index += 1) {
         const record = records[index];
         testEnabledKeysButton.textContent = 'Testing ' + (index + 1) + '/' + records.length + '…';
         setAiFeedback('Checking ' + record.label + ' (' + (index + 1) + ' of ' + records.length + '). No generation request is sent.');
-        const { result } = await testProviderApiKeyRecord(provider, record);
+        const { result, stale } = await testProviderApiKeyRecord(provider, record);
+        if (stale) {
+          changedDuringTest += 1;
+          continue;
+        }
         if (result.ok) passed += 1;
       }
 
       await render(provider);
       const countLabel = records.length === 1 ? 'key' : 'keys';
+      const summary = changedDuringTest
+        ? passed + ' of ' + records.length + ' enabled ' + countLabel + ' passed. ' + changedDuringTest +
+          ' changed or were removed during testing; their results were discarded.'
+        : passed + ' of ' + records.length + ' enabled ' + countLabel + ' passed the provider access check.';
       setAiFeedback(
-        passed + ' of ' + records.length + ' enabled ' + countLabel + ' passed the provider access check.',
-        passed === records.length ? 'success' : 'error'
+        summary,
+        passed === records.length && changedDuringTest === 0 ? 'success' : 'error'
       );
     } catch (error) {
       setAiFeedback(error.message || 'Could not finish testing enabled keys.', 'error');
     } finally {
+      if (apiKeyList) {
+        apiKeyList.inert = wasInert;
+        if (previousBusyState === null) apiKeyList.removeAttribute('aria-busy');
+        else apiKeyList.setAttribute('aria-busy', previousBusyState);
+      }
       testEnabledKeysButton.textContent = originalText;
       try { await render(getCurrentProvider()); } catch (_) {}
     }

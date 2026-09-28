@@ -77,6 +77,16 @@
 .api-key-test-status.success { color: #b4f2cc; }
 .api-key-test-status.failed { color: #fda4af; }
 .api-key-test-status.pending { color: #abb7b0; }
+.api-key-primary-actions { justify-content: space-between; margin-top: 8px; }
+.api-key-primary-actions .catalog-action { min-height: 30px; padding-inline: 12px; }
+.api-key-management { margin-top: 7px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,.065); }
+.api-key-management > summary { display: flex; align-items: center; justify-content: space-between; min-height: 30px; cursor: pointer; list-style: none; font-size: 10px; font-weight: 750; user-select: none; }
+.api-key-management > summary::-webkit-details-marker { display: none; }
+.api-key-management > summary::after { content: "+"; display: grid; width: 21px; height: 21px; place-items: center; border: 1px solid rgba(232,121,249,.2); border-radius: 7px; font-size: 14px; line-height: 1; }
+.api-key-management[open] > summary::after { content: "−"; }
+.api-key-management > summary:focus-visible { outline: 2px solid #f5d0fe; outline-offset: 2px; border-radius: 4px; }
+.api-key-management-content { padding-top: 6px; }
+.api-key-management-actions { margin-top: 0; }
 .local-config-keys { margin-top: 9px; }
 .local-key-heading { margin: 0; color: #b4a8b7; font-size: 9px; font-weight: 750; }
 .local-config-card { border-style: dashed; border-color: rgba(255,255,255,.1); }
