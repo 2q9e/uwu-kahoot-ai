@@ -8,16 +8,15 @@
       return type === 'true_false' ? 2 : 0;
     }
 
-    async function pollForAnswerChoices(expectedCount = 0, nonce = getNonce(), fallbackChoices = []) {
+    async function pollForAnswerChoices(expectedCount = 0, nonce = getNonce(), fallbackChoices = [], previousChoices = []) {
       const requiredCount = Math.max(2, Number(expectedCount) || 0);
       const fallbacks = Array.isArray(fallbackChoices)
         ? fallbackChoices.map(choice => String(choice ?? '').trim())
         : [];
+      const previous = Array.isArray(previousChoices)
+        ? previousChoices.map(choice => String(choice ?? '').trim().toLocaleLowerCase())
+        : [];
       const fallbackIsComplete = fallbacks.length >= requiredCount && fallbacks.every(Boolean);
-      if (fallbackIsComplete) {
-        log(`Answer choices read from Kahoot data: ${fallbacks.length}`);
-        return fallbacks;
-      }
 
       const readChoices = () => {
         const findElements = domAdapter.findVisibleAnswerElements || domAdapter.findAnswerElements;
@@ -31,6 +30,31 @@
         }
         return choices;
       };
+
+      if (fallbackIsComplete) {
+        // Kahoot's parsed payload is usually authoritative, but a brief check
+        // catches choices that appear on screen after a partial payload.
+        const readExpandedChoices = () => {
+          const choices = readChoices();
+          if (!choices || choices.length <= fallbacks.length) return null;
+          const normalized = choices.map(choice => String(choice ?? '').trim().toLocaleLowerCase());
+          const isPreviousQuestion = previous.length > 1 && previous.length === normalized.length &&
+            previous.every((choice, index) => choice === normalized[index]);
+          return isPreviousQuestion ? null : choices;
+        };
+        const expandedChoices = await waitForDomResult(readExpandedChoices, {
+          timeout: 900,
+          nonce,
+          settleMs: 180
+        });
+        if (expandedChoices) {
+          log(`Additional answer choices confirmed on page: ${expandedChoices.length}`);
+          return expandedChoices;
+        }
+        log(`Answer choices read from Kahoot data: ${fallbacks.length}`);
+        return fallbacks;
+      }
+
       const choices = await waitForDomResult(readChoices, {
         timeout: 4500,
         nonce,

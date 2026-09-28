@@ -424,6 +424,7 @@ window.addEventListener('kahootQuestionParsed', async (event) => {
     return;
   }
   lastPreparedHash = incomingHash;
+  const previousQuestionChoices = Array.isArray(currentQuestion?.choices) ? [...currentQuestion.choices] : [];
   currentSolveId = createSolveId();
   cancelActiveRequest();
   lastSentHash = null;
@@ -478,7 +479,7 @@ window.addEventListener('kahootQuestionParsed', async (event) => {
     updateStatus('Waiting for on-screen answers…', 'The AI request starts after Kahoot displays the choices.');
     const choiceWaitNonce = submitNonce;
     const expectedChoices = getExpectedChoiceCount(q.type, q.choices);
-    const domChoices = await pollForAnswerChoices(expectedChoices, choiceWaitNonce, q.choices);
+    const domChoices = await pollForAnswerChoices(expectedChoices, choiceWaitNonce, q.choices, previousQuestionChoices);
     if (choiceWaitNonce !== submitNonce || lastPreparedHash !== incomingHash) {
       log('Discarding answer choices from an outdated question.');
       return;
