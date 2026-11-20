@@ -15,9 +15,9 @@
 
 ---
 
-## This is UwU Kahoot AI :)
+## What it does
 
-UwU Kahoot AI reads question data from the selected Kahoot or Blooket player tab and sends it to the provider you configure. Answers come back to the extension, which can highlight a suggestion or use the answer controls you enable.
+UwU Kahoot AI sends question data from the selected Kahoot or Blooket player tab to the AI provider you configure. The extension highlights a suggestion or uses the answer controls you enable. It supports Gemini, OpenRouter, and OpenAI, with local answer history and user-supplied API keys.
 
 ## Credits
 
